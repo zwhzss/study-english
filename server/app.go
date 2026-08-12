@@ -58,7 +58,10 @@ func (a *App) startup(ctx context.Context) {
 		panic("数据库初始化失败: " + err.Error())
 	}
 	reg := ai.NewRegistry(cfg)
-	note("AI Provider 构建完成（LLM=%s ASR=%s）", cfg.LLMModel, cfg.ASRModel)
+	note("AI Provider 初始构建完成（LLM=%s ASR=%s）", cfg.LLMModel, cfg.ASRModel)
+	// 从数据库加载已保存的模型配置并重建 Provider（LLM/TTS/绘图/OCR/ASR 真实 Key 来自表）
+	service.LoadConfigIntoRegistry(db, reg)
+	note("已从数据库加载模型配置（LLM=%s ASR=%s）", cfg.LLMModel, cfg.ASRModel)
 	a.cfg = cfg
 	a.reg = reg
 	a.tbSvc = service.NewTextbookService(db, reg, cfg.DataDir)
