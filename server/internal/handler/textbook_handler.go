@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -100,6 +102,36 @@ func (h *TextbookHandler) ImportLesson(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"data": content})
 }
+
+// TranscribeASR POST /api/asr/transcribe 语音识别（multipart: file=音频, format=webm/wav）
+func (h *TextbookHandler) TranscribeASR(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请上传音频文件"})
+		return
+	}
+	fh, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无法读取音频"})
+		return
+	}
+	defer fh.Close()
+	data, err := io.ReadAll(fh)
+	if err != nil || len(data) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "音频内容为空"})
+		return
+	}
+	format := c.DefaultPostForm("format", "webm")
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	text, err := h.svc.TranscribeASR(ctx, data, format)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "语音识别失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"text": text})
+}
+
 func (h *TextbookHandler) TextbookMeta(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{

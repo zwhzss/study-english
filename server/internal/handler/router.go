@@ -92,6 +92,9 @@ func NewRouter(cfg *config.Config, svc *service.TextbookService, dsvc *service.D
 		api.POST("/pronunciations", ph.Evaluate)
 		api.GET("/pronunciations", ph.List)
 		api.DELETE("/pronunciations/:id", ph.Delete)
+
+		// 语音识别（对话语音输入 / 发音评测）
+		api.POST("/asr/transcribe", h.TranscribeASR)
 	}
 
 	// 若 Angular 构建产物存在，由 Gin 托管静态文件（单端口部署 + SPA fallback）

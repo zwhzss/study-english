@@ -122,7 +122,7 @@
 
           <!-- 场景配图 -->
           <div class="images" *ngIf="content.images?.length">
-            <img *ngFor="let img of content.images" [src]="img" alt="场景配图" />
+            <img *ngFor="let img of content.images" [src]="imgSrc(img)" alt="场景配图" />
           </div>
 
           <!-- SVG 示意图（LLM 生成，前端零成本渲染） -->

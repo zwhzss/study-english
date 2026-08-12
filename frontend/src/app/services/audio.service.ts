@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { ApiService } from './api.service';
 
 /**
  * 音频朗读服务：
@@ -11,11 +12,13 @@ export class AudioService {
   private synth: SpeechSynthesis | null =
     typeof window !== 'undefined' ? window.speechSynthesis : null;
 
+  constructor(private api: ApiService) {}
+
   /** 播放文本：优先 TTS URL，回退浏览器朗读 */
   speak(text: string, url?: string, lang = 'en-US'): void {
     if (url) {
       this.stop();
-      this.audio.src = url;
+      this.audio.src = this.api.mediaUrl(url);
       this.audio.play().catch(() => this.speakFallback(text, lang));
       return;
     }

@@ -292,6 +292,11 @@ export class TextbooksComponent implements OnInit {
     });
   }
 
+  /** 图片 URL 转换（Wails 下转 file://，浏览器下原样） */
+  imgSrc(img: string): string {
+    return this.api.mediaUrl(img);
+  }
+
   /** 从大模型拉取该课时内容（异步后台任务，切页面不中断） */
   pullContent(lesson: CatalogLesson): void {
     this.loadingContent = true;

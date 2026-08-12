@@ -48,6 +48,7 @@ export class DialogueComponent implements OnInit, OnDestroy {
   inputText = '';
   sending = false;
   interimText = ''; // 语音识别中间结果
+  recogBusy = false; // 录音识别中
   micOn = false;
   micSupported = true;
   error = '';
@@ -63,7 +64,7 @@ export class DialogueComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.micSupported = this.speech.supported();
+    this.micSupported = true; // MediaRecorder 由运行时检测
     this.route.paramMap.subscribe((p) => {
       const id = p.get('lessonId') || '0';
       if (id === 'free') {
@@ -220,34 +221,36 @@ export class DialogueComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** 麦克风：语音输入（浏览器识别，静音自动结束 / 手动停止发送） */
+  /** 麦克风：录音 → 后端 ASR 识别 → 自动发送（原声不上传 AI，仅本地转文字） */
   toggleMic(): void {
     if (this.micOn) {
-      // 点停止：提交最终识别结果 → onFinal 自动发送；按钮恢复麦克风
+      // 点停止：停止录音并识别发送；按钮恢复麦克风
       this.speech.stop();
       this.micOn = false;
-      // 兜底：若 stop 后浏览器未触发最终结果，用已识别到的文本发送
-      const pending = this.interimText.trim();
-      if (pending && !this.sending) {
-        this.send(pending);
-      }
       this.interimText = '';
       return;
     }
     // 点麦克风：开始录音（按钮变红色停止）
     this.micOn = true;
     this.interimText = '';
-    this.speech.start(
-      'en-US',
-      (finalText) => {
+    this.recogBusy = true;
+    this.speech.start({
+      onResult: (text) => {
+        this.recogBusy = false;
+        this.micOn = false;
+        this.inputText = text;
         this.interimText = '';
-        this.inputText = finalText;
-        // 识别到完整句子自动发送（VAD/停止触发）
-        this.send(finalText);
+        this.send(text); // 识别到即自动发送
       },
-      (interim) => (this.interimText = interim),
-      () => (this.micOn = false) // 任何结束（静音/停止/错误）都恢复按钮为麦克风
-    );
+      onError: (msg) => {
+        this.recogBusy = false;
+        this.micOn = false;
+        this.error = msg;
+      },
+      onState: (r) => {
+        this.micOn = r;
+      },
+    });
   }
 
   /** 朗读某条消息 */

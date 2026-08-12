@@ -27,13 +27,13 @@ export class PronunciationComponent implements OnInit {
   result: PronunciationRecord | null = null;
   history: PronunciationRecord[] = [];
   submitting = false;
+  recognizing = false;
   error = '';
 
   // 底层
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
   private recStart = 0;
-  private speechRec: any = null;
   private stream: MediaStream | null = null;
   playingUrl = '';
 
@@ -59,7 +59,7 @@ export class PronunciationComponent implements OnInit {
     });
   }
 
-  /** 开始录音：MediaRecorder 录原声 + SpeechRecognition 同步识别 */
+  /** 开始录音：MediaRecorder 录原声，停止后发给后端 ASR 识别 */
   async startRecording(): Promise<void> {
     this.error = '';
     this.result = null;
@@ -75,37 +75,19 @@ export class PronunciationComponent implements OnInit {
       this.mediaRecorder.start();
       this.recStart = Date.now();
       this.recording = true;
-
-      // 同步语音识别（转文字，用于评分对比）
-      const w = window as any;
-      const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
-      this.speechRec = new Ctor();
-      this.speechRec.lang = 'en-US';
-      this.speechRec.interimResults = true;
-      this.speechRec.continuous = true;
-      this.speechRec.onresult = (e: any) => {
-        let text = '';
-        for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
-        this.recognizedText = text.trim();
-      };
-      this.speechRec.onend = () => {
-        // 识别结束（停止时触发），保留已识别文本
-      };
-      try { this.speechRec.start(); } catch { /* ignore */ }
     } catch {
       this.error = '无法访问麦克风，请允许浏览器麦克风权限';
       this.recording = false;
     }
   }
 
-  /** 停止录音：提交识别文本 + 生成音频 blob */
+  /** 停止录音：生成音频 blob → 保存预览 + 发送后端 ASR 识别 */
   stopRecording(): void {
     if (!this.mediaRecorder) return;
     this.mediaRecorder.stop();
     this.durationMs = Date.now() - this.recStart;
     this.recording = false;
-    // 停止语音识别（提交最终文本）
-    try { this.speechRec?.stop(); } catch { /* ignore */ }
+    this.recognizing = true;
     this.stream?.getTracks().forEach((t) => t.stop());
   }
 
@@ -117,6 +99,18 @@ export class PronunciationComponent implements OnInit {
       this.audioBase64 = (reader.result as string).split(',')[1] || '';
     };
     reader.readAsDataURL(blob);
+    // 后端 ASR 识别（SenseVoice）
+    this.api.transcribeASR(blob, 'webm').subscribe({
+      next: (res) => {
+        this.recognizing = false;
+        this.recognizedText = (res.text || '').trim();
+        if (!this.recognizedText) this.error = '未识别到语音内容，请重新录音';
+      },
+      error: (e) => {
+        this.recognizing = false;
+        this.error = '语音识别失败：' + (e.error?.error || e.message || '');
+      },
+    });
   }
 
   /** 提交评测 */

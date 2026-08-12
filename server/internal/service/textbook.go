@@ -572,6 +572,11 @@ func (s *TextbookService) ReorderCatalog(textbookID uint, ids []uint) error {
 	})
 }
 
+// TranscribeASR 语音识别：音频 → 文本（registry 的 ASR Provider，未配置 Key 时 mock 占位）
+func (s *TextbookService) TranscribeASR(ctx context.Context, audio []byte, format string) (string, error) {
+	return s.reg.ASR().Transcribe(ctx, audio, format)
+}
+
 // DeleteTextbook 删除教材（事务）：连带目录项、AI 内容、导入内容、相关对话会话
 func (s *TextbookService) DeleteTextbook(id uint) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {

@@ -34,6 +34,10 @@ const PLATFORM_PRESETS: Record<string, { name: string; url: string; models: stri
     { name: '阿里云百炼', url: 'https://dashscope.aliyuncs.com/api/v1', models: ['wanx2.1-t2i-turbo'] },
     { name: '智谱AI', url: 'https://open.bigmodel.cn/api/paas/v4', models: ['cogview-3-flash'] },
   ],
+  asr: [
+    { name: '硅基流动', url: 'https://api.siliconflow.cn/v1', models: ['iic/SenseVoiceSmall', 'FunAudioLLM/SenseVoiceSmall'] },
+    { name: 'OpenAI', url: 'https://api.openai.com/v1', models: ['whisper-1'] },
+  ],
 };
 
 @Component({
@@ -79,7 +83,7 @@ export class ConfigComponent implements OnInit {
   }
 
   /** 一键填充：选平台自动填 Base URL + 推荐模型 */
-  fillPreset(type: 'llm' | 'tts' | 'image' | 'ocr', platformUrl: string): void {
+  fillPreset(type: 'llm' | 'tts' | 'image' | 'ocr' | 'asr', platformUrl: string): void {
     const p = this.cfg?.[type];
     if (!p) return;
     const preset = this.platformsOf(type).find((x) => x.url === platformUrl);
@@ -104,7 +108,7 @@ export class ConfigComponent implements OnInit {
   }
 
   /** 测试连接：使用画面当前输入的值（非已保存/环境变量），30 秒超时提示 */
-  test(type: 'llm' | 'tts' | 'image' | 'ocr'): void {
+  test(type: 'llm' | 'tts' | 'image' | 'ocr' | 'asr'): void {
     if (!this.cfg) return;
     this.testing[type] = true;
     this.testResult[type] = { ok: false, msg: `测试中…（最长 ${TEST_TIMEOUT_MS / 1000} 秒）` };
@@ -127,7 +131,7 @@ export class ConfigComponent implements OnInit {
   }
 
   /** 保存配置（Key 未修改时传脱敏值，后端自动保留原 Key）——每卡片单独保存 */
-  save(type: 'llm' | 'tts' | 'image' | 'ocr'): void {
+  save(type: 'llm' | 'tts' | 'image' | 'ocr' | 'asr'): void {
     if (!this.cfg) return;
     this.saving[type] = true;
     this.savedMsg[type] = '';

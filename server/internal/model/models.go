@@ -200,6 +200,7 @@ type AIConfig struct {
 	TTS       ProviderSetting `gorm:"type:text;serializer:json" json:"tts"`   // 语音
 	Image     ProviderSetting `gorm:"type:text;serializer:json" json:"image"` // 绘图
 	OCR       ProviderSetting `gorm:"type:text;serializer:json" json:"ocr"`   // OCR 视觉模型（图片导入课文）
+	ASR       ProviderSetting `gorm:"type:text;serializer:json" json:"asr"`   // 语音识别（对话语音输入/发音评测）
 	UpdatedAt time.Time       `json:"updated_at"`
 }
 

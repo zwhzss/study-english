@@ -1,140 +1,103 @@
 import { Injectable } from '@angular/core';
+import { ApiService } from './api.service';
 
 /**
- * 浏览器语音识别服务（Web Speech API）：
- * - 识别到完整句子 → 立即结束并发送（不等静音检测，保证"说完即发"）
- * - 15 秒超时兜底：无论任何情况都强制结束（保证按钮恢复麦克风）
- * - 会话代次（generation）机制：旧会话异步回调不干扰新会话
+ * 语音输入服务（WebView2/浏览器通用）：
+ * 1. MediaRecorder 录制原声音频（不把原声发给 AI 对话，仅本地转文字）
+ * 2. 停止后把音频发给后端 ASR（SenseVoice）识别为英文文本
  */
 @Injectable({ providedIn: 'root' })
 export class SpeechService {
-  private rec: any = null;
-  private running = false;
-  private gen = 0; // 会话代次
-  private timers = new Map<number, any>(); // gen → 超时 timer
+  recording = false;
+  private mediaRecorder: MediaRecorder | null = null;
+  private chunks: Blob[] = [];
+  private stream: MediaStream | null = null;
+  private onResult: ((text: string) => void) | null = null;
+  private onError: ((msg: string) => void) | null = null;
+  private onState: ((recording: boolean) => void) | null = null;
 
-  // 录音超时（毫秒）：无结束信号时强制停止，恢复按钮
-  private static readonly REC_TIMEOUT_MS = 15000;
+  constructor(private api: ApiService) {}
 
-  supported(): boolean {
-    return !!this.recImpl();
-  }
-
-  private recImpl(): any {
-    const w = window as any;
-    return w.SpeechRecognition || w.webkitSpeechRecognition || null;
-  }
-
-  get listening(): boolean {
-    return this.running;
-  }
-
-  start(
-    lang: string,
-    onFinal: (text: string) => void,
-    onInterim: (text: string) => void,
-    onEnd: () => void
-  ): void {
-    const Ctor = this.recImpl();
-    if (!Ctor) return;
-    this.abort();
-
-    const gen = ++this.gen;
-    const rec = new Ctor();
-    rec.lang = lang || 'en-US';
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 1;
-
-    let finalReceived = false;
-    rec.onresult = (e: any) => {
-      if (gen !== this.gen) return;
-      let interim = '';
-      let final = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) final += r[0].transcript;
-        else interim += r[0].transcript;
-      }
-      if (final) {
-        // 识别到完整句：立即发送并结束（不等静音检测）
-        finalReceived = true;
-        onFinal(final);
-        try {
-          rec.stop();
-        } catch {
-          /* ignore */
-        }
-      } else if (interim) {
-        onInterim(interim);
-      }
-    };
-    rec.onerror = () => this.finish(gen, onEnd);
-    rec.onend = () => this.finish(gen, onEnd);
-
-    this.rec = rec;
-    this.running = true;
-    // 超时兜底：无论是否识别到，15 秒强制结束（恢复按钮）
-    const timer = setTimeout(() => {
-      if (gen !== this.gen) return;
-      try {
-        rec.stop();
-      } catch {
-        /* ignore */
-      }
-      // 未识别到任何最终句，直接结束（恢复按钮）
-      if (!finalReceived) this.finish(gen, onEnd);
-    }, SpeechService.REC_TIMEOUT_MS);
-    this.timers.set(gen, timer);
-
+  /** 开始录音（识别文本通过 onResult 回调返回） */
+  async start(opts: {
+    onResult: (text: string) => void;
+    onError?: (msg: string) => void;
+    onState?: (recording: boolean) => void;
+  }): Promise<void> {
+    this.onResult = opts.onResult;
+    this.onError = opts.onError || null;
+    this.onState = opts.onState || null;
     try {
-      rec.start();
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      this.running = false;
-      this.finish(gen, onEnd);
+      this.fail('无法访问麦克风，请允许麦克风权限');
+      return;
     }
+    this.chunks = [];
+    try {
+      this.mediaRecorder = new MediaRecorder(this.stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
+    } catch {
+      try {
+        this.mediaRecorder = new MediaRecorder(this.stream);
+      } catch {
+        this.stream.getTracks().forEach((t) => t.stop());
+        this.fail('当前环境不支持录音');
+        return;
+      }
+    }
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this.chunks.push(e.data);
+    };
+    this.mediaRecorder.start();
+    this.recording = true;
+    this.onState?.(true);
   }
 
-  /** 主动停止（手动点红色按钮）：提交最终结果 */
+  /** 停止录音并发送给后端 ASR 识别 */
   stop(): void {
-    if (this.rec) {
-      const r = this.rec;
-      try {
-        r.stop();
-      } catch {
-        /* ignore */
-      }
-    }
+    if (!this.mediaRecorder) return;
+    this.mediaRecorder.onstop = () => this.transcribe();
+    this.mediaRecorder.stop();
+    this.stream?.getTracks().forEach((t) => t.stop());
+    this.recording = false;
+    this.onState?.(false);
   }
 
-  private abort(): void {
-    this.gen++;
-    this.clearTimer(this.gen);
-    if (this.rec) {
-      const old = this.rec;
-      this.rec = null;
-      this.running = false;
-      try {
-        old.stop();
-      } catch {
-        /* ignore */
-      }
+  /** 放弃当前录音（不识别） */
+  cancel(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      try { this.mediaRecorder.stop(); } catch { /* ignore */ }
     }
+    this.stream?.getTracks().forEach((t) => t.stop());
+    this.recording = false;
+    this.onState?.(false);
+    this.chunks = [];
   }
 
-  private finish(gen: number, onEnd: () => void): void {
-    if (gen !== this.gen) return;
-    this.clearTimer(gen);
-    this.running = false;
-    this.rec = null;
-    onEnd?.();
+  private transcribe(): void {
+    const blob = new Blob(this.chunks, { type: 'audio/webm' });
+    if (blob.size < 200) {
+      this.fail('录音太短，请再说一遍');
+      return;
+    }
+    this.api.transcribeASR(blob, 'webm').subscribe({
+      next: (res) => {
+        const text = (res.text || '').trim();
+        if (!text) {
+          this.fail('未识别到语音内容，请重新录音');
+          return;
+        }
+        this.onResult?.(text);
+      },
+      error: (e) => this.fail(e.error?.error || e.message || '语音识别失败'),
+    });
   }
 
-  private clearTimer(gen: number): void {
-    const t = this.timers.get(gen);
-    if (t) {
-      clearTimeout(t);
-      this.timers.delete(gen);
-    }
+  private fail(msg: string): void {
+    this.recording = false;
+    this.onState?.(false);
+    this.onError?.(msg);
   }
 }

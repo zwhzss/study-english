@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
@@ -58,6 +59,9 @@ func (s *ConfigService) Get() (*model.AIConfig, string, error) {
 		},
 		OCR: model.ProviderSetting{
 			Provider: "openai", BaseURL: env.ImageBaseURL, APIKey: "", Model: "Qwen/Qwen3-VL-8B-Instruct",
+		},
+		ASR: model.ProviderSetting{
+			Provider: "openai", BaseURL: env.ASRBaseURL, APIKey: "", Model: env.ASRModel,
 		},
 	}, "default", nil
 }
@@ -164,9 +168,44 @@ func (s *ConfigService) Test(ctx context.Context, service string, ps model.Provi
 			}
 			return "OCR 连接成功（视觉模型已响应）", nil
 		})
+	case "asr":
+		if ps.Provider == "mock" || ps.APIKey == "" {
+			return "", errors.New("未配置语音识别 API Key（或选择了 Mock），无法测试连接")
+		}
+		return run(func() (string, error) {
+			asr := ai.NewOpenAIASR(or(ps.BaseURL, env.ASRBaseURL), ps.APIKey, or(ps.Model, "iic/SenseVoiceSmall"))
+			// 用 1 秒静音 WAV 验证连接（SenseVoice 接受任意音频）
+			wav := makeTestWAV()
+			if _, err := asr.Transcribe(ctx, wav, "wav"); err != nil {
+				return "", err
+			}
+			return "语音识别连接成功", nil
+		})
 	default:
-		return "", fmt.Errorf("未知服务类型: %s（支持 llm / tts / image / ocr）", service)
+		return "", fmt.Errorf("未知服务类型: %s（支持 llm / tts / image / ocr / asr）", service)
 	}
+}
+
+// makeTestWAV 生成 0.1 秒静音 WAV（16bit 单声道 8kHz），用于 ASR 连接测试
+func makeTestWAV() []byte {
+	var buf bytes.Buffer
+	rate := 8000
+	buf.WriteString("RIFF")
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(36+rate/10*2))
+	buf.WriteString("WAVEfmt ")
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(16))
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(1)) // PCM
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(1)) // mono
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(rate))
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(rate*2))
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(2))
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(16))
+	buf.WriteString("data")
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(rate/10*2))
+	for i := 0; i < rate/10; i++ {
+		_ = binary.Write(&buf, binary.LittleEndian, int16(0))
+	}
+	return buf.Bytes()
 }
 
 // makeTestPNG 生成指定尺寸的纯色 PNG（base64），用于 OCR 连接测试
@@ -235,6 +274,12 @@ func cfgToConfig(cfg *model.AIConfig) *config.Config {
 	if c.ImageProvider == "" {
 		c.ImageProvider = "auto"
 	}
+	c.OCRBaseURL = cfg.OCR.BaseURL
+	c.OCRAPIKey = cfg.OCR.APIKey
+	c.OCRModel = cfg.OCR.Model
+	c.ASRBaseURL = cfg.ASR.BaseURL
+	c.ASRAPIKey = cfg.ASR.APIKey
+	c.ASRModel = cfg.ASR.Model
 	return c
 }
 

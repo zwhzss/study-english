@@ -10,7 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
-//go:embed all:frontend/dist/frontend/browser
+//go:embed all:web/dist
 var assets embed.FS
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup: app.startup,
+		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
 		Bind: []interface{}{
 			app,

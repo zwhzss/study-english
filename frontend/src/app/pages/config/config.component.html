@@ -168,6 +168,38 @@
       <p class="hint">用于「真实课文」Tab 的图片导入：拍照/扫描的课本页 → 视觉模型识别成课文原文。可用与绘图相同的硅基流动 Key。</p>
     </div>
 
+    <!-- 语音识别 ASR（对话语音输入 / 发音评测） -->
+    <div class="card">
+      <h2>🎙️ 语音识别（ASR）<span class="tag">对话语音 + 发音评测</span></h2>
+      <div class="preset-row">
+        <label>常用平台（一键填充）
+          <select (change)="fillPreset('asr', $any($event.target).value)">
+            <option value="">-- 选择平台 --</option>
+            <option *ngFor="let pl of platformsOf('asr')" [value]="pl.url">{{ pl.name }}</option>
+          </select>
+        </label>
+        <span class="hint-inline">自动填 Base URL + 推荐模型，只需再填 API Key</span>
+      </div>
+      <div class="grid">
+        <label>Base URL
+          <input [(ngModel)]="cfg.asr.base_url" placeholder="https://api.siliconflow.cn/v1" />
+        </label>
+        <label>API Key
+          <input type="password" [(ngModel)]="cfg.asr.api_key" placeholder="sk-..." />
+        </label>
+        <label>识别模型
+          <input [(ngModel)]="cfg.asr.model" placeholder="iic/SenseVoiceSmall" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" (click)="test('asr')" [disabled]="testing['asr']">{{ testing['asr'] ? '测试中…' : '🔌 测试连接' }}</button>
+        <button class="btn primary" (click)="save('asr')" [disabled]="saving['asr']">{{ saving['asr'] ? '保存中…' : '💾 保存' }}</button>
+        <span class="tresult" [class.ok]="testResult['asr'].ok" [class.bad]="testResult['asr'] && !testResult['asr'].ok" *ngIf="testResult['asr']">{{ testResult['asr'].msg }}</span>
+        <span class="saved" *ngIf="savedMsg['asr']">{{ savedMsg['asr'] }}</span>
+      </div>
+      <p class="hint">对话页点麦克风说话、发音评测的朗读识别，都通过此模型把语音转成英文文本（推荐 iic/SenseVoiceSmall，用硅基流动 Key）。</p>
+    </div>
+
     <div class="save-bar">
       <span class="updated" *ngIf="cfg.updated_at">上次保存：{{ cfg.updated_at | date:'MM-dd HH:mm' }}</span>
       <span class="hint">三个模型独立保存：改动哪个卡片就点哪个的「💾 保存」（其余卡片保持已保存状态）</span>

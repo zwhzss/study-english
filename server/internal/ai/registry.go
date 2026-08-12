@@ -11,6 +11,7 @@ type Registry struct {
 	llm          atomic.Pointer[LLMProvider]
 	tts          atomic.Pointer[TTS]
 	img          atomic.Pointer[ImageProvider]
+	asr          atomic.Pointer[ASR]
 	mockExplicit atomic.Bool // LLM 是否为显式选择 mock（未配置 Key 自动 mock 时为 false）
 }
 
@@ -20,14 +21,16 @@ func NewRegistry(cfg *config.Config) *Registry {
 	return r
 }
 
-// Rebuild 用最新配置重建三个 Provider（配置保存后调用）
+// Rebuild 用最新配置重建 Provider（配置保存后调用）
 func (r *Registry) Rebuild(cfg *config.Config) {
 	llm := NewLLM(cfg)
 	tts := NewTTS(cfg)
 	img := NewImageProvider(cfg)
+	asr := NewASR(cfg)
 	r.llm.Store(&llm)
 	r.tts.Store(&tts)
 	r.img.Store(&img)
+	r.asr.Store(&asr)
 	r.mockExplicit.Store(cfg.MockExplicit)
 }
 
@@ -45,3 +48,18 @@ func (r *Registry) Image() ImageProvider {
 }
 
 func (r *Registry) ImageRaw() *ImageProvider { return r.img.Load() }
+
+func (r *Registry) ASR() ASR {
+	if p := r.asr.Load(); p != nil {
+		return *p
+	}
+	return &mockASR{}
+}
+
+// NewASR 按配置构建语音识别 Provider（未配置 Key → mock 占位）
+func NewASR(cfg *config.Config) ASR {
+	if cfg.ASRAPIKey == "" {
+		return &mockASR{}
+	}
+	return NewOpenAIASR(cfg.ASRBaseURL, cfg.ASRAPIKey, cfg.ASRModel)
+}

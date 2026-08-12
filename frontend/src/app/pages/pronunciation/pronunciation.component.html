@@ -27,7 +27,7 @@
               [disabled]="!recSupported">
         {{ recording ? '⏹ 停止录音' : '🎤 开始录音' }}
       </button>
-      <span class="rec-hint">{{ recording ? '正在录音…（朗读目标文本）' : '点击开始，朗读后点停止' }}</span>
+      <span class="rec-hint">{{ recording ? '正在录音…（朗读目标文本）' : (recognizing ? '⏳ 识别中…' : '点击开始，朗读后点停止') }}</span>
     </div>
 
     <div class="field" *ngIf="recognizedText">

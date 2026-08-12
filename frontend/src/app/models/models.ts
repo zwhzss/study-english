@@ -140,6 +140,7 @@ export interface AIConfig {
   tts: ProviderSetting;
   image: ProviderSetting;
   ocr: ProviderSetting;
+  asr: ProviderSetting;
   updated_at: string;
 }
 

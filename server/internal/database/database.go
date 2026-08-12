@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,8 +14,37 @@ import (
 	"study-english/server/internal/model"
 )
 
+// migrateLegacyData 数据目录迁移（v1 开发期数据在项目 data/，现统一到 %AppData%\StudyEnglish）：
+// 目标库不存在且旧库存在 → 自动复制（保留已有教材/内容/配置），绝不覆盖
+func migrateLegacyData(target string) {
+	if _, err := os.Stat(target); err == nil {
+		return // 目标已存在
+	}
+	legacy := filepath.Join("data", "study-english.db")
+	if _, err := os.Stat(legacy); err != nil {
+		return // 无旧库
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return
+	}
+	in, err := os.Open(legacy)
+	if err != nil {
+		return
+	}
+	defer in.Close()
+	out, err := os.Create(target)
+	if err != nil {
+		return
+	}
+	defer out.Close()
+	_, _ = io.Copy(out, in)
+	_ = out.Sync()
+	fmt.Println("[migrate] 已把旧数据 data/study-english.db 迁移到", target)
+}
+
 // Init 打开 SQLite（纯 Go 驱动，免 CGO），启用 WAL + busy_timeout，配置连接池
 func Init(dbPath string) (*gorm.DB, error) {
+	migrateLegacyData(dbPath)
 	if dir := filepath.Dir(dbPath); dir != "" {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("创建数据目录失败: %w", err)
