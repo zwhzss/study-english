@@ -31,7 +31,8 @@ type imageGenRequest struct {
 	Model          string `json:"model"`
 	Prompt         string `json:"prompt"`
 	N              int    `json:"n"`
-	Size           string `json:"size"`
+	Size           string `json:"size,omitempty"`       // OpenAI 兼容（dall-e-3/gpt-image-1）
+	ImageSize      string `json:"image_size,omitempty"` // 硅基流动参数名（size 会被忽略/报错）
 	ResponseFormat string `json:"response_format,omitempty"`
 }
 
@@ -40,6 +41,40 @@ type imageGenResponse struct {
 		URL     string `json:"url"`
 		B64JSON string `json:"b64_json"`
 	} `json:"data"`
+}
+
+// downloadTo 下载图片到本地 path（限制 8MB），成功返回 true
+func (g *OpenAIImageGen) downloadTo(ctx context.Context, src, path string) bool {
+	if !strings.HasPrefix(src, "http") {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+	if err != nil {
+		return false
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil || len(data) < 100 {
+		return false
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return false
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		os.Remove(tmp)
+		return false
+	}
+	return true
 }
 
 func NewOpenAIImageGen(baseURL, apiKey, model, size, dataDir string) (*OpenAIImageGen, error) {
@@ -75,7 +110,9 @@ func (g *OpenAIImageGen) Generate(ctx context.Context, prompt string) (string, e
 	}
 
 	body, _ := json.Marshal(imageGenRequest{
-		Model: g.model, Prompt: prompt, N: 1, Size: g.size, ResponseFormat: "b64_json",
+		Model: g.model, Prompt: prompt, N: 1, Size: g.size, ImageSize: g.size,
+		// 注意：不带 response_format=b64_json —— 硅基流动不支持该参数会 400 报错；
+		// 响应里的 url（临时外链）由 service 层 persistImage 下载本地持久化
 	})
 
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -110,7 +147,8 @@ func (g *OpenAIImageGen) Generate(ctx context.Context, prompt string) (string, e
 	}
 	item := gr.Data[0]
 
-	// 优先 b64_json 存本地（临时文件 + rename 原子落盘，防并发半写）；只有 url 时直接返回（可能是临时外链）
+	// 优先 b64_json 存本地（临时文件 + rename 原子落盘，防并发半写）；
+	// url（硅基流动返回的临时外链）同样下载落盘，保证缓存命中 + 本地持久化（s3 临时地址会过期）
 	if item.B64JSON != "" {
 		raw, err := base64.StdEncoding.DecodeString(item.B64JSON)
 		if err != nil {
@@ -127,6 +165,10 @@ func (g *OpenAIImageGen) Generate(ctx context.Context, prompt string) (string, e
 		return url, nil
 	}
 	if item.URL != "" {
+		// 下载外链到本地（失败则原样返回外链，由 service 层 persistImage 兜底）
+		if g.downloadTo(ctx, item.URL, path) {
+			return url, nil
+		}
 		return item.URL, nil
 	}
 	return "", fmt.Errorf("绘图 API 未返回图片数据")

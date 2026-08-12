@@ -145,6 +145,7 @@ func (s *ConfigService) Test(ctx context.Context, service string, ps model.Provi
 				ImageModel:    or(ps.Model, env.ImageModel),
 				ImageSize:     or(ps.Extra, env.ImageSize),
 				ImageProvider: "openai",
+				DataDir:       env.DataDir, // 测试图落盘到数据目录（否则 CWD/images）
 			}
 			url, err := ai.NewImageProvider(tmp).Generate(ctx, "a simple colorful test scene with a house and a tree")
 			if err != nil {
