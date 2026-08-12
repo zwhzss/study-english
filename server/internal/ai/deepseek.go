@@ -59,15 +59,14 @@ func (d *DeepSeekLLM) ChatJSON(ctx context.Context, system, user string) (string
 	return d.doChat(ctx, reqBody)
 }
 
-// applyModelTuning 按模型差异化参数（照搬 study-math）：
-//   - deepseek-v4-pro：启用 thinking 模式（质量优先）
-//   - 其他（flash 等）：直接输出（速度优先）
+// applyModelTuning 按模型差异化参数：
+//   - deepseek-v4-pro：no thinking 模式（直接输出，更快更省；用户要求关闭 thinking）
+//   - 其他（flash 等）：直接输出
 func (d *DeepSeekLLM) applyModelTuning(req *chatRequest) {
 	if d.model == "deepseek-v4-pro" {
-		req.Thinking = &struct {
-			Type string `json:"type"`
-		}{Type: "enabled"}
-		req.ReasoningEffort = "high"
+		// 显式关闭 thinking：不发送 thinking 字段 + reasoning_effort
+		req.Thinking = nil
+		req.ReasoningEffort = ""
 	}
 }
 
