@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Observable, from, map, mergeMap, of, throwError } from 'rxjs';
 import { ApiResponse, AbilityProfile, AIConfig, CatalogNode, DialogueMessage, DialogueSession, ImportedContent, LessonContent, PronunciationRecord, ProviderSetting, Textbook, TextbookMeta } from '../models/models';
 
@@ -16,20 +16,30 @@ export class ApiService {
     return this.base;
   }
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private ngZone: NgZone) {}
 
   /** 是否运行在 Wails 桌面环境 */
   inWails(): boolean {
     return !!(window as any).go?.main?.App;
   }
 
-  /** 调用 Wails 绑定方法（返回 Promise） */
+  /**
+   * 调用 Wails 绑定方法（返回 Promise）。
+   * 关键：Wails 的 Promise 回调发生在 Angular zone 外，必须用 ngZone.run 包回，
+   * 否则组件字段更新（loading/recognizing/数据）不会触发变更检测 → 界面不刷新（经典坑）
+   */
   private wails<T>(name: string, ...args: any[]): Observable<T> {
     const app = (window as any).go?.main?.App;
     if (!app?.[name]) {
       return throwError(() => new Error(`Wails 绑定方法 ${name} 不可用`));
     }
-    return from(app[name](...args) as Promise<T>);
+    return new Observable<T>((sub) => {
+      const p = app[name](...args) as Promise<T>;
+      p.then(
+        (v) => this.ngZone.run(() => { sub.next(v); sub.complete(); }),
+        (e) => this.ngZone.run(() => sub.error(e instanceof Error ? e : new Error(String(e))))
+      );
+    });
   }
 
   /** 媒体相对路径 → 可播放 URL（Wails 由 asset Handler 提供 /media/，浏览器走 HTTP 同路径） */
