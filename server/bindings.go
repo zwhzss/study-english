@@ -164,11 +164,19 @@ func (a *App) StartStreamDialogue(sessionID uint, text string) error {
 
 // Transcribe 语音识别（音频 base64 → 文本）
 func (a *App) Transcribe(audioBase64 string, format string) (string, error) {
+	a.logf("Transcribe 收到 %d 字节, format=%s", len(audioBase64), format)
 	data, err := base64.StdEncoding.DecodeString(audioBase64)
 	if err != nil {
+		a.logf("Transcribe base64 解码失败: %v", err)
 		return "", errors.New("音频数据无效")
 	}
-	return a.reg.ASR().Transcribe(context.Background(), data, format)
+	text, err := a.reg.ASR().Transcribe(context.Background(), data, format)
+	if err != nil {
+		a.logf("Transcribe 识别失败: %v", err)
+		return "", err
+	}
+	a.logf("Transcribe 成功: %q", text)
+	return text, nil
 }
 
 // ========== 能力画像 ==========

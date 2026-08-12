@@ -72,3 +72,16 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(ctx context.Context) {}
+
+// logf 追加写启动/运行日志（%AppData%\StudyEnglish\app.log），用于排查"无反应/卡住"类问题
+func (a *App) logf(format string, args ...any) {
+	if a.cfg == nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(a.cfg.DataDir, "app.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = fmt.Fprintf(f, "%s [app] %s\n", time.Now().Format("15:04:05"), fmt.Sprintf(format, args...))
+}

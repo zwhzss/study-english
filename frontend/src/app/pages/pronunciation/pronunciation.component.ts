@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { timeout } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { PronunciationRecord } from '../../models/models';
@@ -105,7 +106,7 @@ export class PronunciationComponent implements OnInit {
     };
     reader.readAsDataURL(blob);
     // 后端 ASR 识别（SenseVoice）
-    this.api.transcribeASR(blob, 'webm').subscribe({
+    this.api.transcribeASR(blob, 'webm').pipe(timeout(30000)).subscribe({
       next: (res) => {
         this.recognizing = false;
         this.recognizedText = (res.text || '').trim();

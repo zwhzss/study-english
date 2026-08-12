@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
+import { timeout } from 'rxjs';
 
 /**
  * 语音输入服务（WebView2/浏览器通用）：
@@ -82,7 +83,7 @@ export class SpeechService {
       this.fail('录音太短，请再说一遍');
       return;
     }
-    this.api.transcribeASR(blob, 'webm').subscribe({
+    this.api.transcribeASR(blob, 'webm').pipe(timeout(30000)).subscribe({
       next: (res) => {
         const text = (res.text || '').trim();
         if (!text) {
