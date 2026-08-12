@@ -32,15 +32,8 @@ export class ApiService {
     return from(app[name](...args) as Promise<T>);
   }
 
-  private wailsSync<T>(name: string, ...args: any[]): T {
-    const app = (window as any).go?.main?.App;
-    return app?.[name]?.(...args) as T;
-  }
-
-  /** 媒体相对路径 → 可播放 URL（Wails 下转 file:// 绝对路径） */
+  /** 媒体相对路径 → 可播放 URL（Wails 由 asset Handler 提供 /media/，浏览器走 HTTP 同路径） */
   mediaUrl(url: string): string {
-    if (!url) return url;
-    if (this.inWails()) return this.wailsSync<string>('MediaURL', url);
     return url;
   }
 

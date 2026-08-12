@@ -78,7 +78,7 @@
         <button class="btn ghost" (click)="reuse(rec)" title="复练这句">↻ 复练</button>
         <button class="btn ghost del" (click)="deleteRec(rec)">🗑</button>
       </div>
-      <audio *ngIf="playingUrl === rec.audio_url" [src]="rec.audio_url" controls autoplay style="width:100%;margin-top:8px;"></audio>
+      <audio *ngIf="playingUrl === rec.audio_url" [src]="mediaUrl(rec.audio_url)" controls autoplay style="width:100%;margin-top:8px;"></audio>
     </div>
     <p *ngIf="!history.length" class="empty">还没有评测记录，先录一段试试！</p>
   </div>

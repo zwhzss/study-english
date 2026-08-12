@@ -37,6 +37,11 @@ export class PronunciationComponent implements OnInit {
   private stream: MediaStream | null = null;
   playingUrl = '';
 
+  /** 媒体 URL（Wails asset Handler / 浏览器同路径） */
+  mediaUrl(url: string): string {
+    return this.api.mediaUrl(url);
+  }
+
   /** 分数颜色：≥85 绿、≥60 橙、否则红 */
   scoreColor(v: number): string {
     if (v >= 85) return '#188038';
