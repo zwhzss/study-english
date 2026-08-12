@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, from, map, of, throwError } from 'rxjs';
+import { Observable, from, map, mergeMap, of, throwError } from 'rxjs';
 import { ApiResponse, AbilityProfile, AIConfig, CatalogNode, DialogueMessage, DialogueSession, ImportedContent, LessonContent, PronunciationRecord, ProviderSetting, Textbook, TextbookMeta } from '../models/models';
 
 /**
@@ -47,7 +47,7 @@ export class ApiService {
           for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
           return btoa(bin);
         }),
-        (obs: any) => obs.pipe((b64: any) => this.wails<string>('Transcribe', b64, format).pipe(map((text) => ({ text }))))
+        mergeMap((b64) => this.wails<string>('Transcribe', b64, format).pipe(map((text) => ({ text }))))
       );
     }
     const fd = new FormData();
