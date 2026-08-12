@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -806,11 +808,18 @@ func (s *TextbookService) generateImages(ctx context.Context, fallback []string,
 	return result
 }
 
-// persistImage 把 AI 绘图返回的图片下载到 data/images/ 本地持久化（/media/images/xxx.png），
-// 失败则保留原 URL（外链仍可临时显示）。解决临时 URL 过期 + 迁移丢图问题
+// persistImage 把 AI 绘图返回的图片下载到 data/images/ 本地持久化（/media/images/{urlHash}.png），
+// 失败则保留原 URL（外链仍可临时显示）。按 URL hash 命名实现全局去重（多课时引用同一图不重复下载）
 func (s *TextbookService) persistImage(ctx context.Context, url string) string {
 	if !strings.HasPrefix(url, "http") {
 		return url
+	}
+	hash := sha1.Sum([]byte(url))
+	name := hex.EncodeToString(hash[:10]) + ".png"
+	dir := filepath.Join(s.dataDir, "images")
+	path := filepath.Join(dir, name)
+	if _, err := os.Stat(path); err == nil {
+		return "/media/images/" + name // 已下载过
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -841,15 +850,63 @@ func (s *TextbookService) persistImage(ctx context.Context, url string) string {
 			ext = "gif"
 		}
 	}
-	dir := filepath.Join(s.dataDir, "images")
+	if ext != "png" {
+		name = hex.EncodeToString(hash[:10]) + "." + ext
+		path = filepath.Join(dir, name)
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return url
 	}
-	name := fmt.Sprintf("img-%d.%s", time.Now().UnixNano(), ext)
-	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return url
 	}
 	return "/media/images/" + name
+}
+
+// ImageMigrateResult 外链图片批量本地化结果
+type ImageMigrateResult struct {
+	Lessons    int `json:"lessons"`    // 修改的课时数
+	Downloaded int `json:"downloaded"` // 成功下载的图片数
+	Failed     int `json:"failed"`     // 下载失败的图片数（保留原外链）
+}
+
+// MigrateExternalImages 把历史课文里的外链图片（硅基流动 s3 临时 URL / unsplash）批量下载到本地
+func (s *TextbookService) MigrateExternalImages() (*ImageMigrateResult, error) {
+	var contents []model.AIContent
+	if err := s.db.Find(&contents).Error; err != nil {
+		return nil, err
+	}
+	result := &ImageMigrateResult{}
+	ctx := context.Background()
+	for i := range contents {
+		c := &contents[i]
+		var imgs []string
+		if err := json.Unmarshal([]byte(c.ImagesJSON), &imgs); err != nil || len(imgs) == 0 {
+			continue
+		}
+		changed := false
+		for j, img := range imgs {
+			if !strings.HasPrefix(img, "http") {
+				continue
+			}
+			local := s.persistImage(ctx, img)
+			if strings.HasPrefix(local, "/media/") {
+				imgs[j] = local
+				changed = true
+				result.Downloaded++
+			} else {
+				result.Failed++
+			}
+		}
+		if changed {
+			b, _ := json.Marshal(imgs)
+			if err := s.db.Model(c).Update("images_json", string(b)).Error; err != nil {
+				continue
+			}
+			result.Lessons++
+		}
+	}
+	return result, nil
 }
 
 // synthesizeAndPersistAudio 为对话/词汇合成 TTS 音频并写入 payload（audio_url 入库持久化）

@@ -103,6 +103,16 @@ func (h *TextbookHandler) ImportLesson(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": content})
 }
 
+// MigrateImages POST /api/images/migrate 批量把历史课文外链图片下载到本地
+func (h *TextbookHandler) MigrateImages(c *gin.Context) {
+	result, err := h.svc.MigrateExternalImages()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
 // TranscribeASR POST /api/asr/transcribe 语音识别（multipart: file=音频, format=webm/wav）
 func (h *TextbookHandler) TranscribeASR(c *gin.Context) {
 	file, err := c.FormFile("file")

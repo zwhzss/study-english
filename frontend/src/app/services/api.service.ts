@@ -88,6 +88,12 @@ export class ApiService {
     return this.http.put<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/textbooks/${textbookId}/catalog/order`, { ids });
   }
 
+  /** 外链图片批量下载到本地（历史课文图片永久化） */
+  migrateImages(): Observable<ApiResponse<{ lessons: number; downloaded: number; failed: number }>> {
+    if (this.inWails()) return this.wails<{ lessons: number; downloaded: number; failed: number }>('MigrateImages').pipe(map((d) => ({ data: d })));
+    return this.http.post<ApiResponse<{ lessons: number; downloaded: number; failed: number }>>(`${this.base}/images/migrate`, {});
+  }
+
   getTextbookMeta(): Observable<ApiResponse<TextbookMeta>> {
     if (this.inWails()) return this.wails<TextbookMeta>('TextbookMeta').pipe(map((d) => ({ data: d })));
     return this.http.get<ApiResponse<TextbookMeta>>(`${this.base}/textbooks/meta`);

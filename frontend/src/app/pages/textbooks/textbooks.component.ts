@@ -315,6 +315,24 @@ export class TextbooksComponent implements OnInit {
     });
   }
 
+  /** 修复历史外链图片：批量下载到本地（一次性，图片永久化） */
+  fixImages(): void {
+    if (!confirm('把历史课文里的外链图片（硅基流动临时 URL / unsplash）批量下载到本地，永久保存？\n（下载失败的保留原外链）')) return;
+    this.error = '';
+    this.notice = '⏳ 正在下载外链图片…请稍候';
+    this.api.migrateImages().subscribe({
+      next: (res) => {
+        const d = res.data;
+        this.notice = `✅ 修复完成：${d.downloaded} 张图片已下载到本地（涉及 ${d.lessons} 个课时）` + (d.failed ? `，${d.failed} 张下载失败（保留原外链）` : '');
+        if (this.selectedTextbook) this.loadCatalog(this.selectedTextbook.id); // 刷新目录
+      },
+      error: (e) => {
+        this.error = '图片修复失败：' + this.errMsg(e);
+        this.notice = '';
+      },
+    });
+  }
+
   /** 重新生成：强制覆盖当前课文内容（异步） */
   regenerate(): void {
     if (!this.selectedLesson) return;
