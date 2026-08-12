@@ -1,1 +1,8 @@
 <router-outlet />
+
+<!-- 页面缩放控件（Wails/WebView2 禁用了浏览器 Ctrl+±，这里提供等效缩放） -->
+<div class="zoom-bar">
+  <button class="z-btn" (click)="zoomOut()" title="缩小 (Ctrl+-)">A−</button>
+  <button class="z-val" (click)="resetZoom()" title="恢复 100%">{{ zoom * 100 | number:'1.0-0' }}%</button>
+  <button class="z-btn" (click)="zoomIn()" title="放大 (Ctrl+=)">A+</button>
+</div>

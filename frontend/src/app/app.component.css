@@ -1,1 +1,37 @@
-:host { display: block; }
+/* 右下角悬浮缩放控件 */
+.zoom-bar {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 42, 74, 0.92);
+  border-radius: 24px;
+  padding: 6px 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  user-select: none;
+}
+.z-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+.z-btn:hover { background: rgba(255, 255, 255, 0.3); }
+.z-val {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  min-width: 44px;
+  cursor: pointer;
+  font-family: inherit;
+}
