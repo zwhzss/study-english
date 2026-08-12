@@ -4,9 +4,9 @@
   "outputfilename": "AI英语课堂",
   "frontend": {
     "install": "npm install",
-    "build": "npm run build && node -e \"require('fs').cpSync('dist/frontend/browser','../server/web/dist',{recursive:true})\"",
-    "frontendDir": "frontend",
-    "dist": "dist/frontend/browser",
+    "build": "npm run build",
+    "frontendDir": "../frontend",
+    "dist": "../server/web/dist/browser",
     "devServer": "http://localhost:4200"
   },
   "nsis": {

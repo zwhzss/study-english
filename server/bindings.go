@@ -106,11 +106,18 @@ func (a *App) ImportLesson(lessonID uint, req ImportReq) (*model.ImportedContent
 	return nil, errors.New("请提供文本、PDF 或图片")
 }
 
-func (a *App) TextbookMeta() (map[string]any, error) {
-	return map[string]any{
-		"textbooks": service.TextbookPresets(),
-		"stages":    model.Stages,
-		"grades":    model.GradesByStage,
+// TextbookMetaData 教材预设（Wails 绑定不支持顶层 map 返回值，必须用结构体）
+type TextbookMetaData struct {
+	Textbooks []model.TextbookPreset `json:"textbooks"`
+	Stages    []string               `json:"stages"`
+	Grades    map[string][]string    `json:"grades"`
+}
+
+func (a *App) TextbookMeta() (*TextbookMetaData, error) {
+	return &TextbookMetaData{
+		Textbooks: service.TextbookPresets(),
+		Stages:    model.Stages,
+		Grades:    model.GradesByStage,
 	}, nil
 }
 
