@@ -29,7 +29,7 @@ func TestAbilityProfile(t *testing.T) {
 	t.Logf("零活动画像: %+v | 建议: %s", p, p.Advice)
 
 	// 模拟活动：创建教材+内容（读），对话若干轮（说/听）
-	tbSvc := NewTextbookService(db, mockRegistry(t))
+	tbSvc := NewTextbookService(db, mockRegistry(t), "data")
 	dlgSvc := NewDialogueService(db, mockRegistry(t))
 
 	tb, _ := tbSvc.CreateTextbook("人教版七年级英语上册", "人民教育出版社", "初中", "七年级", "builtin")

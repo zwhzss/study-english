@@ -31,7 +31,7 @@ func main() {
 	// 若数据库已有保存的模型配置，优先使用（覆盖环境变量）
 	service.LoadConfigIntoRegistry(db, reg)
 
-	svc := service.NewTextbookService(db, reg)
+	svc := service.NewTextbookService(db, reg, cfg.DataDir)
 	dsvc := service.NewDialogueService(db, reg)
 	abSvc := service.NewAbilityService(db)
 	cfgSvc := service.NewConfigService(db, reg)

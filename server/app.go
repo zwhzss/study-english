@@ -61,7 +61,7 @@ func (a *App) startup(ctx context.Context) {
 	note("AI Provider 构建完成（LLM=%s ASR=%s）", cfg.LLMModel, cfg.ASRModel)
 	a.cfg = cfg
 	a.reg = reg
-	a.tbSvc = service.NewTextbookService(db, reg)
+	a.tbSvc = service.NewTextbookService(db, reg, cfg.DataDir)
 	a.dgSvc = service.NewDialogueService(db, reg)
 	a.abSvc = service.NewAbilityService(db)
 	a.cfgSvc = service.NewConfigService(db, reg)

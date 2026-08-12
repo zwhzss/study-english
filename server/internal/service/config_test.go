@@ -70,7 +70,7 @@ func TestPullWithoutConfig(t *testing.T) {
 	db := newTestDB(t)
 	// 未显式选择 mock（LLM 自动 mock）
 	reg := ai.NewRegistry(&config.Config{MockContent: true, MockExplicit: false, DataDir: t.TempDir()})
-	svc := NewTextbookService(db, reg)
+	svc := NewTextbookService(db, reg, "data")
 
 	tb, err := svc.CreateTextbook("人教版七年级英语上册", "人民教育出版社", "初中", "七年级", "builtin")
 	if err != nil {

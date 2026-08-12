@@ -53,7 +53,7 @@ func newTestDB(t *testing.T) *gorm.DB {
 
 func newTestService(t *testing.T) *TextbookService {
 	t.Helper()
-	return NewTextbookService(newTestDB(t), mockRegistry(t))
+	return NewTextbookService(newTestDB(t), mockRegistry(t), "data")
 }
 
 // TestCreateTextbookAndCatalog 教材创建 + 内置目录初始化

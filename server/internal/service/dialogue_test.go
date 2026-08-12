@@ -10,7 +10,7 @@ import (
 func newDialogueTestService(t *testing.T) (*TextbookService, *DialogueService, uint) {
 	t.Helper()
 	db := newTestDB(t)
-	tbSvc := NewTextbookService(db, mockRegistry(t))
+	tbSvc := NewTextbookService(db, mockRegistry(t), "data")
 	dlgSvc := NewDialogueService(db, mockRegistry(t))
 
 	tb, err := tbSvc.CreateTextbook("人教版七年级英语上册", "人民教育出版社", "初中", "七年级", "builtin")

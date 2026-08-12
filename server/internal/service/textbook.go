@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"gorm.io/gorm"
@@ -33,19 +37,21 @@ func truncateForLog(s string, max int) string {
 // TextbookService 教材业务：目录初始化 + 单元内容拉取 + 查询
 // reg 提供 LLM/TTS/绘图 Provider（配置保存后可动态重建）
 type TextbookService struct {
-	db  *gorm.DB
-	reg *ai.Registry
-	log *slog.Logger
+	db      *gorm.DB
+	reg     *ai.Registry
+	dataDir string
+	log     *slog.Logger
 }
 
 // svcLogger 包级 logger（测试通过 TestMain 替换为静默实现，避免日志刷屏）
 var svcLogger = slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-func NewTextbookService(db *gorm.DB, reg *ai.Registry) *TextbookService {
+func NewTextbookService(db *gorm.DB, reg *ai.Registry, dataDir string) *TextbookService {
 	return &TextbookService{
-		db:  db,
-		reg: reg,
-		log: svcLogger.With("svc", "textbook"),
+		db:      db,
+		reg:     reg,
+		dataDir: dataDir,
+		log:     svcLogger.With("svc", "textbook"),
 	}
 }
 
@@ -787,15 +793,63 @@ func (s *TextbookService) generateImages(ctx context.Context, fallback []string,
 	for i, prompt := range prompts {
 		url, err := s.reg.Image().Generate(ctx, prompt)
 		if err == nil && url != "" {
-			result = append(result, url)
+			// AI 绘图返回的多为临时外链（如硅基流动 s3 temporary，几小时后过期）→ 下载到本地持久化
+			result = append(result, s.persistImage(ctx, url))
 		} else if i < len(fallback) && fallback[i] != "" {
-			result = append(result, fallback[i]) // 回退：保留模型给出的配图 URL
+			// 回退：模型给出的配图 URL（unsplash 等外链）→ 同样下载到本地（离线可用 + 统一迁移）
+			result = append(result, s.persistImage(ctx, fallback[i]))
 		}
 	}
 	if len(result) == 0 {
 		return fallback
 	}
 	return result
+}
+
+// persistImage 把 AI 绘图返回的图片下载到 data/images/ 本地持久化（/media/images/xxx.png），
+// 失败则保留原 URL（外链仍可临时显示）。解决临时 URL 过期 + 迁移丢图问题
+func (s *TextbookService) persistImage(ctx context.Context, url string) string {
+	if !strings.HasPrefix(url, "http") {
+		return url
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return url
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return url
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return url
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20)) // 上限 8MB
+	if err != nil || len(data) < 100 {
+		return url
+	}
+	ext := "png"
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
+		switch {
+		case strings.Contains(ct, "jpeg"), strings.Contains(ct, "jpg"):
+			ext = "jpg"
+		case strings.Contains(ct, "webp"):
+			ext = "webp"
+		case strings.Contains(ct, "gif"):
+			ext = "gif"
+		}
+	}
+	dir := filepath.Join(s.dataDir, "images")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return url
+	}
+	name := fmt.Sprintf("img-%d.%s", time.Now().UnixNano(), ext)
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+		return url
+	}
+	return "/media/images/" + name
 }
 
 // synthesizeAndPersistAudio 为对话/词汇合成 TTS 音频并写入 payload（audio_url 入库持久化）

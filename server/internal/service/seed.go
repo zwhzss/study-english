@@ -79,7 +79,7 @@ func SeedTextbooks(db *gorm.DB) {
 		return // 已初始化过，尊重用户的所有删除与定制
 	}
 	for _, s := range TextbookSeeds {
-		svc := NewTextbookService(db, nil)
+		svc := NewTextbookService(db, nil, "data")
 		if _, err := svc.CreateTextbook(s.Name, s.Publisher, s.Stage, s.Grade, "builtin"); err != nil {
 			log.Printf("[seed] 教材创建失败 %s: %v", s.Name, err)
 			continue
