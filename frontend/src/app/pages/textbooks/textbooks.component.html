@@ -1,0 +1,245 @@
+<div class="app">
+  <!-- 左侧：教材库（可收缩） -->
+  <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
+    <div class="side-head">
+      <h1 class="logo" *ngIf="!sidebarCollapsed">📖 AI 英语课堂</h1>
+      <button class="collapse-btn" (click)="toggleSidebar()"
+              [title]="sidebarCollapsed ? '展开侧栏' : '收缩侧栏，给内容让出空间'">
+        {{ sidebarCollapsed ? '➤' : '◀' }}
+      </button>
+    </div>
+
+    <div class="side-body" *ngIf="!sidebarCollapsed">
+      <div class="side-links">
+        <a class="ability-link" routerLink="/ability">📊 能力画像</a>
+        <a class="ability-link" routerLink="/pronunciation">🗣️ 发音评测</a>
+        <a class="ability-link" routerLink="/config">⚙️ 模型配置</a>
+      </div>
+
+      <div class="create-box">
+        <h3>➕ 同步新教材</h3>
+        <select [(ngModel)]="form.stage" (change)="onStageChange()">
+          <option *ngFor="let s of meta?.stages || ['小学','初中','高中','成人']">{{ s }}</option>
+        </select>
+        <select [(ngModel)]="form.name" (change)="onTextbookSelect()">
+          <option value="">-- 选择常用教材 --</option>
+          <option *ngFor="let t of filteredTextbooks" [value]="t.name">{{ t.name }}</option>
+          <option value="__custom__">✍️ 自定义教材…</option>
+        </select>
+        <input *ngIf="customName" [(ngModel)]="form.name" placeholder="教材名称，如 人教版七年级英语上册" />
+        <div class="row">
+          <input [(ngModel)]="form.publisher" placeholder="出版社（自动带出）" />
+        </div>
+        <select [(ngModel)]="form.grade">
+          <option *ngFor="let g of gradeOptions">{{ g }}</option>
+        </select>
+        <button class="btn primary" (click)="createTextbook()" [disabled]="creating || !form.name.trim()">
+          {{ creating ? '初始化目录中…' : '创建并初始化目录' }}
+        </button>
+        <p class="hint">从下拉选择常用教材，出版社/年级自动带出，避免手工输入歧义</p>
+      </div>
+
+      <div class="tb-list" *ngIf="libraryTextbooks.length">
+        <h3>📚 教材库（{{ libraryTextbooks.length }}/{{ textbooks.length }}）</h3>
+        <div class="tb-item" *ngFor="let tb of libraryTextbooks; let i = index"
+             [class.active]="selectedTextbook?.id === tb.id"
+             (click)="selectTextbook(tb)">
+          <div class="tb-name">{{ tb.name }}</div>
+          <div class="tb-meta">{{ tb.grade }} · {{ tb.stage }} · {{ tb.catalog_source === 'llm' ? 'AI 目录' : '内置模板' }}</div>
+          <span class="tb-order">
+            <button class="ob dark" (click)="moveTextbook(i, -1); $event.stopPropagation()" [disabled]="i === 0" title="上移教材">↑</button>
+            <button class="ob dark" (click)="moveTextbook(i, 1); $event.stopPropagation()" [disabled]="i === libraryTextbooks.length - 1" title="下移教材">↓</button>
+          </span>
+          <button class="tb-del" (click)="removeTextbook(tb, $event)" title="删除该教材（连带内容）">🗑</button>
+        </div>
+      </div>
+      <p class="hint" *ngIf="!libraryTextbooks.length && textbooks.length">该阶段暂无教材，可在上方创建</p>
+      <p *ngIf="error" class="err">{{ error }}</p>
+    </div>
+  </aside>
+
+  <!-- 右侧：目录 + 内容 -->
+  <main class="main">
+    <!-- 目录树 -->
+    <section class="catalog" *ngIf="selectedTextbook">
+      <h2>📑 {{ selectedTextbook.name }} <span class="badge">{{ selectedTextbook.grade }}</span></h2>
+      <div class="catalog-body">
+        <ng-container *ngFor="let node of catalog; let ui = index">
+          <div class="unit">
+            <div class="unit-title">
+              📦 {{ node.unit }} · {{ node.title }}
+              <span class="order-btns">
+                <button class="ob" (click)="moveUnit(-1, ui)" [disabled]="ui === 0" title="上移单元">↑</button>
+                <button class="ob" (click)="moveUnit(1, ui)" [disabled]="ui === catalog.length - 1" title="下移单元">↓</button>
+              </span>
+            </div>
+            <div class="lessons">
+              <div class="lesson" *ngFor="let l of node.lessons; let li = index"
+                   [class.active]="selectedLesson?.id === l.id"
+                   (click)="selectLesson(l)">
+                <span class="dot" [class.done]="l.has_content"></span>
+                <span class="l-title">{{ l.title }}</span>
+                <span class="scene" *ngIf="l.scene">🏷️ {{ l.scene }}</span>
+                <span class="l-order">
+                  <button class="ob mini" (click)="moveLesson(ui, li, -1); $event.stopPropagation()" [disabled]="li === 0" title="上移课时">↑</button>
+                  <button class="ob mini" (click)="moveLesson(ui, li, 1); $event.stopPropagation()" [disabled]="li === node.lessons.length - 1" title="下移课时">↓</button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+        <p *ngIf="!loadingCatalog && !catalog.length" class="empty">该教材暂无目录，请先创建教材。</p>
+      </div>
+    </section>
+
+    <!-- 课时内容 -->
+    <section class="content" *ngIf="selectedLesson">
+      <!-- 主内容区提示（成功/失败可见） -->
+      <div class="main-notice" *ngIf="notice">{{ notice }}</div>
+      <div class="main-error" *ngIf="error">{{ error }}</div>
+
+      <!-- Tab 切换：AI 创作 / 真实课文 -->
+      <div class="tabs">
+        <button class="tab" [class.active]="activeTab === 'ai'" (click)="switchTab('ai')">🎨 AI 创作</button>
+        <button class="tab" [class.active]="activeTab === 'imported'" (click)="switchTab('imported')">📖 真实课文</button>
+      </div>
+
+      <!-- ============ Tab1: AI 创作 ============ -->
+      <ng-container *ngIf="activeTab === 'ai'">
+        <ng-container *ngIf="content; else noContent">
+          <div class="content-head">
+            <h2>{{ content.title }}</h2>
+            <div class="tags">
+              <span class="tag scene">🏷️ 场景：{{ content.scene }}</span>
+              <span class="tag src">来源：AI 创作（独立拓展）</span>
+              <button class="btn ghost" (click)="playAll()">🔊 全文朗读</button>
+              <button class="btn ghost" (click)="stopPlay()">⏹ 停止</button>
+              <a class="btn ghost" *ngIf="canDialogue()"
+                 [routerLink]="['/dialogue', content.catalog_item_id]">🎭 与 AI 角色对话</a>
+              <button class="btn ghost" (click)="regenerate()" title="覆盖当前内容，从 AI 重新生成">🔄 重新生成</button>
+            </div>
+          </div>
+
+          <!-- 场景配图 -->
+          <div class="images" *ngIf="content.images?.length">
+            <img *ngFor="let img of content.images" [src]="img" alt="场景配图" />
+          </div>
+
+          <!-- SVG 示意图（LLM 生成，前端零成本渲染） -->
+          <div class="svgs" *ngIf="hasSVGs()">
+            <h3>🖼️ 示意图 <small>（LLM 生成的 SVG，前端直接渲染）</small></h3>
+            <div class="svg-card" *ngFor="let s of content.svg_images">
+              <div class="svg-title">{{ s.title }}</div>
+              <img class="svg-img" [src]="svgDataUrl(s.svg)" [alt]="s.title" />
+            </div>
+          </div>
+
+          <!-- 多角色对话气泡 -->
+          <div class="dialogue">
+            <h3>💬 多角色情景对话 <small>（点击气泡朗读该句）</small></h3>
+            <div class="turns">
+              <div class="turn" *ngFor="let t of content.dialogue">
+                <div class="bubble" [style.--role-color]="roleColor(t.role)" (click)="play(t.text, t.audio_url)">
+                  <span class="avatar">{{ roleIcon(t.role) }}</span>
+                  <div class="msg">
+                    <span class="role-name" [style.color]="roleColor(t.role)">{{ t.role_name }} <i>{{ t.role }}</i></span>
+                    <span class="text">{{ t.text }}</span>
+                    <span class="voice-tag">{{ content.role_voices[t.role] || '标准发音' }}</span>
+                  </div>
+                  <span class="play-btn">🔊</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 核心词汇 -->
+          <div class="block" *ngIf="content.key_vocab?.length">
+            <h3>📝 核心词汇</h3>
+            <div class="vocab-grid">
+              <div class="vocab-card" *ngFor="let v of content.key_vocab">
+                <div class="v-top">
+                  <span class="v-word">{{ v.word }}</span>
+                  <button class="mini-btn" (click)="play(v.word + '. ' + v.example, v.audio_url)">🔊</button>
+                </div>
+                <div class="v-phonetic">{{ v.phonetic }} · {{ v.meaning }}</div>
+                <div class="v-example">“{{ v.example }}”</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 语法点 -->
+          <div class="block" *ngIf="content.grammar_points?.length">
+            <h3>🧩 语法与地道表达</h3>
+            <div class="grammar-card" *ngFor="let g of content.grammar_points">
+              <div class="g-point">{{ g.point }}</div>
+              <div class="g-exp">{{ g.explanation }}</div>
+              <div class="g-ex">💡 {{ g.example }}</div>
+            </div>
+          </div>
+
+          <!-- 能力型练习 -->
+          <div class="block" *ngIf="content.practice?.length">
+            <h3>🎯 能力训练（无刷题）</h3>
+            <div class="practice-card" *ngFor="let p of content.practice">
+              <span class="p-type">{{ practiceLabel(p.type) }}</span>
+              <div class="p-prompt">{{ p.prompt }}</div>
+              <div class="p-example">示例：{{ p.example }}</div>
+              <div class="p-hints" *ngIf="p.hints?.length">
+                <span class="hint-chip" *ngFor="let h of p.hints">💡 {{ h }}</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #noContent>
+          <div class="empty-box">
+            <h2>📘 {{ selectedLesson.title }}</h2>
+            <p *ngIf="selectedLesson.scene">真实场景：{{ selectedLesson.scene }}</p>
+            <p>AI 创作内容尚未生成。点击下方按钮，AI 将为本课时创作能力型拓展内容（对话/词汇/语法/配图，无版权问题）。</p>
+            <button class="btn primary big" (click)="pullContent(selectedLesson)" [disabled]="loadingContent">
+              {{ loadingContent ? '⏳ AI 生成中…' : '🤖 从大模型拉取本课内容' }}
+            </button>
+          </div>
+        </ng-template>
+      </ng-container>
+
+      <!-- ============ Tab2: 真实课文 ============ -->
+      <ng-container *ngIf="activeTab === 'imported'">
+        <div class="imported-text" *ngIf="importedContent">
+          <div class="it-head">
+            <h3>📖 课文原文 <span class="tag src">已导入 · 非 AI 生成</span></h3>
+            <div class="it-actions">
+              <button class="btn ghost" (click)="play(importedContent.imported_text)">🔊 朗读原文</button>
+              <button class="btn ghost" (click)="toggleImport()">📥 重新导入</button>
+            </div>
+          </div>
+          <div class="it-body">{{ importedContent.imported_text }}</div>
+        </div>
+
+        <div class="empty-box" *ngIf="!importedContent">
+          <h2>📘 {{ selectedLesson.title }}</h2>
+          <p>尚未导入真实课文。可通过粘贴文本或上传 PDF 录入教材原文（版权合规通道）。</p>
+          <button class="btn primary big" (click)="toggleImport()">📥 导入课文（PDF/文本）</button>
+        </div>
+
+        <!-- 导入面板 -->
+        <div class="import-panel" *ngIf="showImport">
+          <h4>📥 导入真实课文 <small>（版权合规通道：教材原文经此录入，AI 内容为独立创作）</small></h4>
+          <input [(ngModel)]="importTitle" placeholder="课文标题（留空用课时名）" />
+          <textarea [(ngModel)]="importText" rows="6" placeholder="粘贴课文原文…（或上传 PDF）"></textarea>
+          <div class="import-row">
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" (change)="onFileSelected($event)" />
+            <button class="btn primary" (click)="submitImport()" [disabled]="importing">{{ importing ? '导入中…' : '✅ 确认导入' }}</button>
+          </div>
+          <p class="hint">支持：PDF（文本型直接解析）· 图片 PNG/JPG（视觉模型 OCR 识别课文）· 粘贴文本</p>
+        </div>
+      </ng-container>
+    </section>
+
+    <section class="welcome" *ngIf="!selectedTextbook && !selectedLesson">
+      <h2>👋 欢迎使用 AI 英语课堂</h2>
+      <p>左侧创建或选择教材，即可开始学习。系统将按 教材名称/年级/单元 从 AI 大模型生成图文并茂、多角色对话、支持语音朗读的课时内容。</p>
+      <a class="btn primary big" routerLink="/dialogue/free">🎭 开始自由对话</a>
+    </section>
+  </main>
+</div>

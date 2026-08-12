@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #eef2f7;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.ability-page { max-width: 980px; margin: 0 auto; padding: 16px; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #0f2a4a;
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+}
+.back { background: rgba(255,255,255,0.12); color: #fff; text-decoration: none; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+.back:hover { background: rgba(255,255,255,0.22); }
+.title-box h1 { font-size: 18px; margin: 0; }
+.sub { font-size: 12px; opacity: 0.75; margin: 3px 0 0; }
+
+.err { color: #d93025; background: #fdecea; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+
+.layout { display: flex; gap: 16px; flex-wrap: wrap; }
+.card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 1px 4px rgba(15,42,74,0.08); }
+.radar-card { flex: 1.4; min-width: 340px; }
+.advice-card { flex: 1; min-width: 280px; }
+
+.scores { display: flex; justify-content: space-around; margin-top: 8px; flex-wrap: wrap; gap: 6px; }
+.score { font-size: 15px; font-weight: 700; }
+
+.advice-card h2 { font-size: 16px; color: #0f2a4a; margin: 0 0 10px; }
+.weak-tag { display: inline-block; background: #fff4e5; color: #b06000; border-radius: 20px; padding: 4px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.advice { font-size: 14px; color: #374151; line-height: 1.7; }
+.stat { font-size: 13px; color: #6b7280; margin: 10px 0; }
+.tips { margin: 0; padding-left: 0; list-style: none; }
+.tips li { font-size: 13px; color: #4b5563; padding: 6px 0; border-bottom: 1px dashed #e5eaf0; }
+.tips li:last-child { border-bottom: none; }
+
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; }
+  .layout { flex-direction: column; }
+}

@@ -1,0 +1,42 @@
+<div class="ability-page">
+  <header class="topbar">
+    <a class="back" routerLink="/textbooks">← 返回教材</a>
+    <div class="title-box">
+      <h1>📊 我的能力画像</h1>
+      <p class="sub">能力型教学：不记考试分，记录 听/说/读/写 四维能力值（渐进成长曲线）</p>
+    </div>
+  </header>
+
+  <p *ngIf="error" class="err">{{ error }}</p>
+
+  <ng-container *ngIf="profile">
+    <div class="layout">
+      <!-- 雷达图 -->
+      <div class="card radar-card">
+        <div id="ability-radar" style="width:100%;height:360px;"></div>
+        <div class="scores">
+          <span class="score" [style.color]="'#1a73e8'">听 {{ profile.listening }}</span>
+          <span class="score" [style.color]="'#188038'">说 {{ profile.speaking }}</span>
+          <span class="score" [style.color]="'#b06000'">读 {{ profile.reading }}</span>
+          <span class="score" [style.color]="'#7b1fa2'">写 {{ profile.writing }}</span>
+        </div>
+      </div>
+
+      <!-- 建议 -->
+      <div class="card advice-card">
+        <h2>💡 学习建议</h2>
+        <div class="weak-tag">最薄弱：{{ profile.weakest }}</div>
+        <p class="advice">{{ profile.advice }}</p>
+        <div class="stat">
+          累计学习活动：<b>{{ profile.total_activities }}</b> 次
+        </div>
+        <ul class="tips">
+          <li>🎧 <b>听力</b>：用课时「聆听模式」多听原声，训练捕捉关键信息</li>
+          <li>🗣️ <b>口语</b>：多用「AI 实景对话」+ 麦克风开口，AI 不打断不纠错</li>
+          <li>📖 <b>阅读</b>：穿透式阅读积累句型，生词行间释义</li>
+          <li>✍️ <b>写作</b>：完成课时的「写一写」，AI 润色对比地道表达</li>
+        </ul>
+      </div>
+    </div>
+  </ng-container>
+</div>

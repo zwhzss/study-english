@@ -1,0 +1,366 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f4f6fa;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  color: #1f2937;
+}
+
+/* ---------- 左侧教材库 ---------- */
+.sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  background: #0f2a4a;
+  color: #e8eef7;
+  padding: 20px 16px;
+  overflow-y: auto;
+  max-height: 100vh;
+  position: sticky;
+  top: 0;
+  transition: width 0.2s ease;
+}
+/* 收缩态：只留收缩按钮，内容区获得全部空间 */
+.sidebar.collapsed {
+  width: 48px;
+  padding: 20px 8px;
+  overflow: visible;
+}
+.sidebar.collapsed .side-body { display: none; }
+
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.sidebar.collapsed .side-head { justify-content: center; margin-bottom: 0; }
+
+.collapse-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #e8eef7;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.collapse-btn:hover { background: #1a73e8; }
+
+.logo {
+  font-size: 20px;
+  margin: 4px 4px 18px;
+}
+
+.create-box {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.create-box h3, .tb-list h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.create-box input, .create-box select {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13px;
+}
+
+.create-box .row {
+  display: flex;
+  gap: 8px;
+}
+
+.create-box input::placeholder { color: #9fb3cc; }
+.create-box select option { color: #111; }
+
+.hint {
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 6px 0 0;
+}
+
+.tb-list { margin-top: 4px; }
+
+.tb-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 4px;
+  position: relative;
+}
+.tb-item:hover { background: rgba(255, 255, 255, 0.1); }
+.tb-item.active { background: #1a73e8; }
+.tb-name { font-size: 14px; font-weight: 600; padding-right: 26px; }
+.tb-meta { font-size: 12px; opacity: 0.65; margin-top: 2px; }
+.tb-del {
+  position: absolute;
+  right: 8px;
+  top: 10px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: #fff;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.tb-del:hover { opacity: 1; color: #ff6b6b; transform: scale(1.2); }
+
+/* 排序按钮（sidebar 深色版：提亮可见） */
+.tb-order { position: absolute; right: 34px; top: 10px; display: inline-flex; gap: 3px; }
+.ob.dark {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.ob.dark:hover:not(:disabled) { background: #1a73e8; }
+.ob.dark:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ---------- 右侧 ---------- */
+.main {
+  flex: 1;
+  padding: 24px 32px 60px;
+  min-width: 0;
+}
+
+/* 目录树 */
+.catalog {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 1px 4px rgba(15, 42, 74, 0.08);
+  margin-bottom: 22px;
+}
+
+.catalog h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge {
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.unit { margin-bottom: 14px; }
+
+.unit-title {
+  font-weight: 600;
+  color: #0f2a4a;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.drag-hint { font-size: 11px; color: #9aa4b2; font-weight: 400; }
+
+/* 排序按钮（↑↓） */
+.order-btns { margin-left: 8px; display: inline-flex; gap: 4px; }
+.ob {
+  border: 1px solid #dce3ec;
+  background: #fff;
+  color: #1a73e8;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 3px 7px;
+  cursor: pointer;
+}
+.ob:hover:not(:disabled) { background: #e8f0fe; }
+.ob:disabled { opacity: 0.35; cursor: not-allowed; }
+.ob.mini { padding: 2px 5px; font-size: 11px; }
+
+.lesson { position: relative; }
+.l-title { flex: 1; }
+.l-order { margin-left: auto; display: inline-flex; gap: 3px; }
+
+.lessons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.lesson {
+  border: 1px solid #dce3ec;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+  color: #1f2937;
+}
+.lesson:hover { border-color: #1a73e8; }
+.lesson.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  display: inline-block;
+}
+.dot.done { background: #188038; }
+.lesson.active .dot { background: #fff; }
+
+.scene { font-size: 11px; opacity: 0.75; }
+
+/* 课时内容 */
+.content { background: #fff; border-radius: 14px; padding: 24px 28px; box-shadow: 0 1px 4px rgba(15, 42, 74, 0.08); }
+
+/* 主内容区提示条（拉取/生成成功与失败） */
+.main-notice { background: #e6f7ee; color: #188038; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+.main-error { background: #fdecea; color: #d93025; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+
+/* Tab 切换：AI 创作 / 真实课文 */
+.tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #e5eaf0; padding-bottom: 12px; }
+.tab { border: none; background: transparent; font-size: 14px; font-weight: 600; color: #6b7280; padding: 8px 18px; border-radius: 20px; cursor: pointer; transition: all 0.15s; }
+.tab:hover { background: #f2f5f9; }
+.tab.active { background: #1a73e8; color: #fff; }
+
+.content-head h2 { margin: 0 0 10px; font-size: 22px; color: #0f2a4a; }
+
+.tags { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+
+.tag { font-size: 12px; padding: 3px 10px; border-radius: 20px; }
+.tag.scene { background: #fff4e5; color: #b06000; }
+.tag.src { background: #e6f7ee; color: #188038; }
+
+.images { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.images img { width: 320px; height: 190px; object-fit: cover; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+/* SVG 示意图 */
+.svgs h3 small { font-weight: 400; color: #6b7280; font-size: 12px; }
+.svg-card { border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px; margin-bottom: 12px; background: #fbfcfe; display: inline-block; margin-right: 12px; }
+.svg-title { font-size: 13px; font-weight: 600; color: #0f2a4a; margin-bottom: 8px; }
+.svg-img { max-width: 420px; width: 100%; height: auto; border-radius: 8px; }
+
+/* 能力画像/配置入口 */
+.side-links { display: flex; gap: 8px; margin: 0 4px 16px; flex-wrap: wrap; }
+.ability-link { display: inline-block; background: rgba(255,255,255,0.1); color: #e8eef7; text-decoration: none; font-size: 13px; padding: 6px 14px; border-radius: 20px; }
+.ability-link:hover { background: #1a73e8; }
+
+/* 对话气泡 */
+.dialogue h3, .block h3 { font-size: 16px; color: #0f2a4a; margin: 22px 0 12px; }
+.dialogue small { font-weight: 400; color: #6b7280; font-size: 12px; }
+
+.turn { margin-bottom: 10px; }
+
+.bubble {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 720px;
+  background: #f8fafc;
+  border: 1px solid #e5eaf0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  border-left: 4px solid var(--role-color);
+}
+.bubble:hover { transform: translateX(3px); box-shadow: 0 2px 8px rgba(15, 42, 74, 0.12); }
+
+.avatar { font-size: 26px; line-height: 1.3; }
+
+.msg { flex: 1; min-width: 0; }
+.role-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; display: block; }
+.role-name i { font-style: normal; font-weight: 400; opacity: 0.55; font-size: 11px; }
+.text { font-size: 16px; line-height: 1.55; display: block; }
+.voice-tag { font-size: 11px; color: #9aa4b2; display: block; margin-top: 4px; }
+
+.play-btn { font-size: 15px; align-self: center; opacity: 0.55; }
+
+/* 词汇 */
+.vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.vocab-card { border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px; background: #fbfcfe; }
+.v-top { display: flex; justify-content: space-between; align-items: center; }
+.v-word { font-size: 17px; font-weight: 700; color: #1a73e8; }
+.mini-btn { border: 1px solid #dce3ec; background: #fff; border-radius: 8px; cursor: pointer; padding: 4px 8px; font-size: 13px; }
+.mini-btn:hover { background: #e8f0fe; }
+.v-phonetic { font-size: 13px; color: #6b7280; margin: 6px 0; }
+.v-example { font-size: 13px; color: #374151; font-style: italic; }
+
+/* 语法 */
+.grammar-card { border-left: 4px solid #7b1fa2; background: #fbfaff; padding: 12px 16px; border-radius: 0 10px 10px 0; margin-bottom: 10px; }
+.g-point { font-weight: 700; color: #4a148c; }
+.g-exp { font-size: 13px; color: #4b5563; margin-top: 4px; }
+.g-ex { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+/* 练习 */
+.practice-card { border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.p-type { display: inline-block; font-size: 12px; font-weight: 600; background: #e8f0fe; color: #1a73e8; border-radius: 20px; padding: 3px 12px; margin-bottom: 8px; }
+.p-prompt { font-size: 15px; margin-bottom: 6px; }
+.p-example { font-size: 13px; color: #188038; margin-bottom: 6px; }
+.p-hints { display: flex; gap: 8px; flex-wrap: wrap; }
+.hint-chip { font-size: 12px; background: #fff8e6; color: #8a6100; padding: 3px 10px; border-radius: 20px; }
+
+/* 按钮 */
+.btn { border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-weight: 600; transition: opacity 0.15s; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: #1a73e8; color: #fff; width: 100%; margin-top: 2px; }
+.btn.primary:hover:not(:disabled) { background: #1765cc; }
+.btn.primary.big { font-size: 16px; padding: 14px 28px; width: auto; }
+.btn.ghost { background: transparent; border: 1px solid #dce3ec; color: #374151; }
+.btn.ghost:hover { background: #e8f0fe; }
+.btn.ghost.big { padding: 14px 24px; font-size: 15px; }
+
+/* 导入面板 */
+.import-panel { background: #f7fafd; border: 1px dashed #b7c9e3; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.import-panel h4 { margin: 0 0 10px; color: #0f2a4a; font-size: 14px; }
+.import-panel h4 small { font-weight: 400; color: #6b7280; }
+.import-panel input[type="text"], .import-panel input:not([type]), .import-panel textarea {
+  width: 100%; box-sizing: border-box; border: 1px solid #dce3ec; border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 8px;
+}
+.import-panel input[type="file"] { font-size: 12px; margin-bottom: 8px; }
+.import-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* 课文原文 */
+.imported-text { background: #fdfaf3; border: 1px solid #f0e2c3; border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; }
+.it-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.it-head h3 { margin: 0; font-size: 15px; color: #7a5300; display: flex; align-items: center; gap: 8px; }
+.it-body { font-size: 15px; line-height: 1.9; color: #3f3a2e; white-space: pre-wrap; }
+
+.empty-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+.empty-box { text-align: center; padding: 48px 20px; }
+.empty-box h2 { color: #0f2a4a; margin-bottom: 8px; }
+.empty-box p { color: #6b7280; margin-bottom: 22px; }
+
+.err { color: #d93025; font-size: 12px; margin-top: 10px; }
+.empty { color: #9aa4b2; font-size: 13px; }
+.welcome { background: #fff; border-radius: 14px; padding: 48px; text-align: center; box-shadow: 0 1px 4px rgba(15,42,74,0.08); }
+.welcome p { color: #6b7280; max-width: 560px; margin: 12px auto 0; line-height: 1.7; }
+
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; max-height: none; position: static; }
+  .main { padding: 16px; }
+}

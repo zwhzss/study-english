@@ -1,0 +1,176 @@
+<div class="config-page">
+  <header class="topbar">
+    <a class="back" routerLink="/textbooks">← 返回教材</a>
+    <div class="title-box">
+      <h1>⚙️ 模型配置</h1>
+      <p class="sub">配置大模型 / 语音 / 绘图服务，保存后立即生效（无需重启）</p>
+    </div>
+  </header>
+
+  <p *ngIf="error" class="err">{{ error }}</p>
+  <p *ngIf="savedMsg" class="ok">{{ savedMsg }}</p>
+
+  <div class="loading" *ngIf="loading">加载中…</div>
+
+  <ng-container *ngIf="cfg">
+    <!-- 大模型 -->
+    <div class="card">
+      <h2>🧠 大模型（LLM）<span class="tag">内容生成 · AI 语伴对话</span></h2>
+      <div class="preset-row">
+        <label>常用平台（一键填充）
+          <select (change)="fillPreset('llm', $any($event.target).value)">
+            <option value="">-- 选择平台 --</option>
+            <option *ngFor="let pl of platformsOf('llm')" [value]="pl.url">{{ pl.name }}</option>
+          </select>
+        </label>
+        <span class="hint-inline">自动填 Base URL + 推荐模型，只需再填 API Key</span>
+      </div>
+      <div class="grid">
+        <label>类型
+          <select [(ngModel)]="cfg.llm.provider">
+            <option value="openai">OpenAI 兼容 API</option>
+            <option value="mock">Mock（内置示例）</option>
+          </select>
+        </label>
+        <label>Base URL
+          <input [(ngModel)]="cfg.llm.base_url" placeholder="https://api.deepseek.com" />
+        </label>
+        <label>API Key
+          <input type="password" [(ngModel)]="cfg.llm.api_key" placeholder="sk-..." />
+        </label>
+        <label>模型（选择即激活）
+          <select *ngIf="llmModelsOf().length" [(ngModel)]="cfg.llm.model" (change)="activateLLMModel(cfg.llm.model)">
+            <option *ngFor="let m of llmModelsOf()" [value]="m">{{ m }}<span *ngIf="m === cfg.llm.model"> ✓ 激活</span></option>
+          </select>
+          <input *ngIf="!llmModelsOf().length" [(ngModel)]="cfg.llm.model" placeholder="deepseek-v4-flash" />
+        </label>
+      </div>
+      <div class="actions">
+        <span class="active-tag" *ngIf="llmModelsOf().length">⚡ 当前激活：{{ cfg.llm.model }}</span>
+        <button class="btn" (click)="test('llm')" [disabled]="testing['llm']">{{ testing['llm'] ? '测试中…' : '🔌 测试连接' }}</button>
+        <button class="btn primary" (click)="save('llm')" [disabled]="saving['llm']">{{ saving['llm'] ? '保存中…' : '💾 保存' }}</button>
+        <span class="tresult" [class.ok]="testResult['llm'].ok" [class.bad]="testResult['llm'] && !testResult['llm'].ok" *ngIf="testResult['llm']">{{ testResult['llm'].msg }}</span>
+        <span class="saved" *ngIf="savedMsg['llm']">{{ savedMsg['llm'] }}</span>
+      </div>
+    </div>
+
+    <!-- 语音 -->
+    <div class="card">
+      <h2>🔊 语音合成（TTS）<span class="tag">课文朗读 · 对话发音</span></h2>
+      <div class="preset-row">
+        <label>常用平台（一键填充）
+          <select (change)="fillPreset('tts', $any($event.target).value)">
+            <option value="">-- 选择平台 --</option>
+            <option *ngFor="let pl of platformsOf('tts')" [value]="pl.url">{{ pl.name }}</option>
+          </select>
+        </label>
+        <span class="hint-inline">自动填 Base URL + 推荐模型，只需再填 API Key</span>
+      </div>
+      <div class="grid">
+        <label>类型
+          <select [(ngModel)]="cfg.tts.provider">
+            <option value="openai">OpenAI 兼容 API</option>
+            <option value="mock">Mock（浏览器朗读）</option>
+          </select>
+        </label>
+        <label>Base URL
+          <input [(ngModel)]="cfg.tts.base_url" placeholder="https://api.siliconflow.cn/v1" />
+        </label>
+        <label>API Key
+          <input type="password" [(ngModel)]="cfg.tts.api_key" placeholder="sk-..." />
+        </label>
+        <label>模型
+          <input [(ngModel)]="cfg.tts.model" placeholder="FunAudioLLM/CosyVoice2-0.5B" />
+        </label>
+        <label>音色（可空）
+          <input [(ngModel)]="cfg.tts.extra" placeholder="按角色自动映射，可留空" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" (click)="test('tts')" [disabled]="testing['tts']">{{ testing['tts'] ? '测试中…' : '🔌 测试连接' }}</button>
+        <button class="btn primary" (click)="save('tts')" [disabled]="saving['tts']">{{ saving['tts'] ? '保存中…' : '💾 保存' }}</button>
+        <span class="tresult" [class.ok]="testResult['tts'].ok" [class.bad]="testResult['tts'] && !testResult['tts'].ok" *ngIf="testResult['tts']">{{ testResult['tts'].msg }}</span>
+        <span class="saved" *ngIf="savedMsg['tts']">{{ savedMsg['tts'] }}</span>
+      </div>
+    </div>
+
+    <!-- 绘图 -->
+    <div class="card">
+      <h2>🎨 AI 绘图（Image）<span class="tag">场景配图</span></h2>
+      <div class="preset-row">
+        <label>常用平台（一键填充）
+          <select (change)="fillPreset('image', $any($event.target).value)">
+            <option value="">-- 选择平台 --</option>
+            <option *ngFor="let pl of platformsOf('image')" [value]="pl.url">{{ pl.name }}</option>
+          </select>
+        </label>
+        <span class="hint-inline">自动填 Base URL + 推荐模型，只需再填 API Key</span>
+      </div>
+      <div class="grid">
+        <label>类型
+          <select [(ngModel)]="cfg.image.provider">
+            <option value="auto">自动（有 Key 用 API，无 Key 回退）</option>
+            <option value="openai">OpenAI 兼容 API</option>
+            <option value="mock">Mock（回退配图）</option>
+          </select>
+        </label>
+        <label>Base URL
+          <input [(ngModel)]="cfg.image.base_url" placeholder="https://api.siliconflow.cn/v1" />
+        </label>
+        <label>API Key
+          <input type="password" [(ngModel)]="cfg.image.api_key" placeholder="sk-..." />
+        </label>
+        <label>模型
+          <input [(ngModel)]="cfg.image.model" placeholder="black-forest-labs/FLUX.1-schnell" />
+        </label>
+        <label>尺寸（可空）
+          <input [(ngModel)]="cfg.image.extra" placeholder="1024x1024" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" (click)="test('image')" [disabled]="testing['image']">{{ testing['image'] ? '测试中…' : '🔌 测试连接' }}</button>
+        <button class="btn primary" (click)="save('image')" [disabled]="saving['image']">{{ saving['image'] ? '保存中…' : '💾 保存' }}</button>
+        <span class="tresult" [class.ok]="testResult['image'].ok" [class.bad]="testResult['image'] && !testResult['image'].ok" *ngIf="testResult['image']">{{ testResult['image'].msg }}</span>
+        <span class="saved" *ngIf="savedMsg['image']">{{ savedMsg['image'] }}</span>
+      </div>
+      <p class="hint">⚠️ 测试绘图会实际调用 API 生成一张图（消耗少量额度）</p>
+    </div>
+
+    <!-- OCR 视觉模型（图片导入课文） -->
+    <div class="card">
+      <h2>👁️ OCR 识别（视觉模型）<span class="tag">图片导入真实课文</span></h2>
+      <div class="preset-row">
+        <label>常用平台（一键填充）
+          <select (change)="fillPreset('ocr', $any($event.target).value)">
+            <option value="">-- 选择平台 --</option>
+            <option *ngFor="let pl of platformsOf('ocr')" [value]="pl.url">{{ pl.name }}</option>
+          </select>
+        </label>
+        <span class="hint-inline">自动填 Base URL + 推荐模型，只需再填 API Key</span>
+      </div>
+      <div class="grid">
+        <label>Base URL
+          <input [(ngModel)]="cfg.ocr.base_url" placeholder="https://api.siliconflow.cn/v1" />
+        </label>
+        <label>API Key
+          <input type="password" [(ngModel)]="cfg.ocr.api_key" placeholder="sk-..." />
+        </label>
+        <label>视觉模型
+          <input [(ngModel)]="cfg.ocr.model" placeholder="Qwen/Qwen2.5-VL-7B-Instruct" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn" (click)="test('ocr')" [disabled]="testing['ocr']">{{ testing['ocr'] ? '测试中…' : '🔌 测试连接' }}</button>
+        <button class="btn primary" (click)="save('ocr')" [disabled]="saving['ocr']">{{ saving['ocr'] ? '保存中…' : '💾 保存' }}</button>
+        <span class="tresult" [class.ok]="testResult['ocr'].ok" [class.bad]="testResult['ocr'] && !testResult['ocr'].ok" *ngIf="testResult['ocr']">{{ testResult['ocr'].msg }}</span>
+        <span class="saved" *ngIf="savedMsg['ocr']">{{ savedMsg['ocr'] }}</span>
+      </div>
+      <p class="hint">用于「真实课文」Tab 的图片导入：拍照/扫描的课本页 → 视觉模型识别成课文原文。可用与绘图相同的硅基流动 Key。</p>
+    </div>
+
+    <div class="save-bar">
+      <span class="updated" *ngIf="cfg.updated_at">上次保存：{{ cfg.updated_at | date:'MM-dd HH:mm' }}</span>
+      <span class="hint">三个模型独立保存：改动哪个卡片就点哪个的「💾 保存」（其余卡片保持已保存状态）</span>
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "AIEnglishClass",
+  "outputfilename": "AI英语课堂",
+  "frontend": {
+    "install": "npm install",
+    "build": "npm run build",
+    "frontendDir": "frontend",
+    "dist": "dist/frontend/browser",
+    "devServer": "http://localhost:4200"
+  },
+  "nsis": {
+    "installMode": "perMachine",
+    "language": "2052",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "AI英语课堂"
+  },
+  "info": {
+    "companyName": "StudyEnglish",
+    "productName": "AI英语课堂",
+    "productVersion": "1.0.0",
+    "copyright": "© 2026"
+  }
+}

@@ -1,0 +1,22 @@
+# 依赖
+node_modules/
+vendor/
+
+# 构建产物
+frontend/dist/
+*.exe
+*.log
+build/bin/
+
+# 运行数据（数据库、音频、图片、录音）
+server/data/
+local-image/models/
+
+# IDE / 系统
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Wails 缓存
+wailsjs/

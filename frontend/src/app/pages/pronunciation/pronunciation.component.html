@@ -1,0 +1,85 @@
+<div class="pron-page">
+  <header class="topbar">
+    <a class="back" routerLink="/textbooks">← 返回教材</a>
+    <div class="title-box">
+      <h1>🗣️ 发音评测</h1>
+      <p class="sub">录制自己的朗读 → 发给 AI 评测（准确度/流利度/完整度/语调）→ 记录并可回看</p>
+    </div>
+  </header>
+
+  <p *ngIf="!recSupported" class="err">当前浏览器不支持录音/语音识别，请使用 Chrome 或 Edge。</p>
+  <p *ngIf="error" class="err">{{ error }}</p>
+
+  <!-- 录音评测 -->
+  <div class="card">
+    <h2>🎙️ 录音评测</h2>
+    <div class="field">
+      <label>标题（可选）</label>
+      <input [(ngModel)]="title" placeholder="如：Unit 3 点餐对话" />
+    </div>
+    <div class="field">
+      <label>目标文本（要朗读的英文句子）</label>
+      <textarea [(ngModel)]="targetText" rows="2" placeholder="如：Good evening! Could I see the menu, please?"></textarea>
+    </div>
+
+    <div class="rec-bar">
+      <button class="btn rec" [class.on]="recording" (click)="recording ? stopRecording() : startRecording()"
+              [disabled]="!recSupported">
+        {{ recording ? '⏹ 停止录音' : '🎤 开始录音' }}
+      </button>
+      <span class="rec-hint">{{ recording ? '正在录音…（朗读目标文本）' : '点击开始，朗读后点停止' }}</span>
+    </div>
+
+    <div class="field" *ngIf="recognizedText">
+      <label>识别到的内容（你的朗读）</label>
+      <div class="recognized">“{{ recognizedText }}”</div>
+    </div>
+    <div class="field" *ngIf="audioUrl">
+      <label>本次录音预览</label>
+      <audio [src]="audioUrl" controls style="width:100%"></audio>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" (click)="submit()" [disabled]="submitting || !targetText.trim() || !recognizedText.trim()">
+        {{ submitting ? '评测中…' : '🤖 发给 AI 评测' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- 评测结果 -->
+  <div class="card" *ngIf="result">
+    <h2>📊 评测结果</h2>
+    <div class="scores">
+      <div class="score-item"><span class="s-label">准确度</span><span class="s-val" [style.color]="scoreColor(result.accuracy)">{{ result.accuracy }}</span></div>
+      <div class="score-item"><span class="s-label">流利度</span><span class="s-val" [style.color]="scoreColor(result.fluency)">{{ result.fluency }}</span></div>
+      <div class="score-item"><span class="s-label">完整度</span><span class="s-val" [style.color]="scoreColor(result.completeness)">{{ result.completeness }}</span></div>
+      <div class="score-item"><span class="s-label">语调</span><span class="s-val" [style.color]="scoreColor(result.intonation)">{{ result.intonation }}</span></div>
+      <div class="score-item total"><span class="s-label">综合</span><span class="s-val">{{ result.score }}</span></div>
+    </div>
+    <div class="suggestion">💡 {{ result.suggestion }}</div>
+    <div class="compare">
+      <div class="c-row"><span class="c-tag">目标</span>{{ result.target_text }}</div>
+      <div class="c-row"><span class="c-tag">识别</span>{{ result.recognized_text }}</div>
+    </div>
+  </div>
+
+  <!-- 历史记录 -->
+  <div class="card">
+    <h2>📜 历史评测（{{ history.length }}）</h2>
+    <div class="hist-item" *ngFor="let rec of history">
+      <div class="h-main">
+        <div class="h-title">{{ rec.title }} <span class="h-score">{{ rec.score }}分</span></div>
+        <div class="h-meta">{{ rec.created_at | date:'MM-dd HH:mm' }} · 准确{{ rec.accuracy }} 流利{{ rec.fluency }} 完整{{ rec.completeness }}</div>
+        <div class="h-target">目标：{{ rec.target_text }}</div>
+        <div class="h-sug" *ngIf="rec.suggestion">💡 {{ rec.suggestion }}</div>
+      </div>
+      <div class="h-actions">
+        <button class="btn ghost" (click)="playAudio(rec.audio_url)" [disabled]="!rec.audio_url">{{ playingUrl === rec.audio_url ? '⏹' : '🔊' }} 播放</button>
+        <button class="btn ghost" (click)="reuse(rec)" title="复练这句">↻ 复练</button>
+        <button class="btn ghost del" (click)="deleteRec(rec)">🗑</button>
+      </div>
+      <audio *ngIf="playingUrl === rec.audio_url" [src]="rec.audio_url" controls autoplay style="width:100%;margin-top:8px;"></audio>
+    </div>
+    <p *ngIf="!history.length" class="empty">还没有评测记录，先录一段试试！</p>
+  </div>
+</div>

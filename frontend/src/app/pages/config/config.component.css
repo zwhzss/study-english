@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #eef2f7;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.config-page { max-width: 860px; margin: 0 auto; padding: 16px; }
+
+.topbar { display: flex; align-items: center; gap: 14px; background: #0f2a4a; color: #fff; border-radius: 14px; padding: 14px 20px; margin-bottom: 16px; }
+.back { background: rgba(255,255,255,0.12); color: #fff; text-decoration: none; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+.title-box h1 { font-size: 18px; margin: 0; }
+.sub { font-size: 12px; opacity: 0.75; margin: 3px 0 0; }
+
+.err { color: #d93025; background: #fdecea; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.ok { color: #188038; background: #e6f7ee; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.loading { text-align: center; color: #6b7280; padding: 40px; }
+
+.card { background: #fff; border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(15,42,74,0.08); margin-bottom: 14px; }
+.card h2 { font-size: 16px; color: #0f2a4a; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tag { font-size: 11px; background: #e8f0fe; color: #1a73e8; border-radius: 20px; padding: 3px 10px; font-weight: 400; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+label { font-size: 12px; color: #6b7280; display: flex; flex-direction: column; gap: 4px; }
+label input, label select { border: 1px solid #dce3ec; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #1f2937; }
+label input:focus, label select:focus { outline: none; border-color: #1a73e8; }
+
+/* 一键填充平台行 */
+.preset-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; background: #f4f7fb; border-radius: 8px; padding: 8px 12px; flex-wrap: wrap; }
+.preset-row label { flex-direction: row; align-items: center; gap: 8px; font-weight: 600; color: #0f2a4a; }
+.preset-row select { border: 1px solid #dce3ec; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+.hint-inline { font-size: 11px; color: #9aa4b2; }
+
+.actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.btn { border: 1px solid #dce3ec; background: #f8fafc; border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+.btn:hover { background: #e8f0fe; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; font-size: 15px; padding: 10px 24px; }
+.btn.primary:hover:not(:disabled) { background: #1765cc; }
+
+.tresult { font-size: 12px; color: #6b7280; word-break: break-all; }
+.tresult.ok { color: #188038; }
+.tresult.bad { color: #d93025; }
+
+/* 保存成功提示 */
+.saved { font-size: 12px; color: #188038; background: #e6f7ee; border-radius: 20px; padding: 3px 10px; }
+
+.hint { font-size: 11px; color: #9aa4b2; margin: 10px 0 0; }
+
+/* 激活模型标签 */
+.active-tag { font-size: 12px; font-weight: 600; color: #188038; background: #e6f7ee; border-radius: 20px; padding: 4px 12px; }
+
+.save-bar { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+.updated { font-size: 12px; color: #9aa4b2; }
+
+@media (max-width: 640px) { .topbar { flex-wrap: wrap; } }

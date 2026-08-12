@@ -1,0 +1,58 @@
+<div class="dialogue-page">
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <button class="back" (click)="backToLesson()">← 返回</button>
+    <div class="title-box">
+      <h1>🎭 AI 实景对话</h1>
+      <div class="sub">{{ sessionTitle }} <span *ngIf="sessionScene">· {{ sessionScene }}</span></div>
+    </div>
+    <span class="mic-tip" *ngIf="!micSupported">💡 当前浏览器不支持语音识别，请用文字输入</span>
+  </header>
+
+  <p *ngIf="error" class="err">{{ error }}</p>
+
+  <!-- 角色选择 -->
+  <div class="role-pick" *ngIf="!sessionId && roles.length">
+    <h2>选择你要扮演的角色</h2>
+    <div class="role-cards">
+      <button class="role-card" *ngFor="let r of roles" (click)="selectRole(r.role)">
+        <span class="r-icon">{{ r.icon }}</span>
+        <span class="r-name">{{ r.role_name }}</span>
+        <span class="r-en">{{ r.role }}</span>
+      </button>
+    </div>
+    <p class="hint">你扮演选中的角色，其余角色由 AI 扮演。用英语开口交流，AI 会自然回应，不打断、不纠错——像真实聊天一样。</p>
+  </div>
+
+  <!-- 对话界面 -->
+  <div class="chat" *ngIf="sessionId">
+    <div class="msg-list">
+      <div class="msg" *ngFor="let m of messages"
+           [class.mine]="m.is_user"
+           [class.sys]="m.speaker === 'system'"
+           [class.streaming]="m.streaming">
+        <div class="msg-body" (click)="m.speaker !== 'system' && playMsg(m)">
+          <div class="who">
+            <span class="avatar">{{ iconOf(m.speaker) }}</span>
+            <span class="name">{{ m.speaker_name || '系统' }}</span>
+          </div>
+          <div class="content">{{ m.content }}</div>
+          <span class="spk" *ngIf="m.speaker !== 'system'"
+                [title]="m.is_user ? '复读' : '朗读'">🔊</span>
+        </div>
+      </div>
+      <div class="typing" *ngIf="sending">🤖 AI 思考中…</div>
+      <div class="interim" *ngIf="micOn && interimText">🎤 {{ interimText }}</div>
+    </div>
+
+    <!-- 输入区 -->
+    <div class="input-bar">
+      <button class="mic-btn" [class.on]="micOn" (click)="toggleMic()" [disabled]="!micSupported"
+              [title]="micSupported ? '语音输入（说英文）' : '浏览器不支持语音'">
+        {{ micOn ? '⏹' : '🎤' }}
+      </button>
+      <input [(ngModel)]="inputText" placeholder="输入英文消息…" (keyup.enter)="send()" />
+      <button class="send-btn" (click)="send()" [disabled]="sending || !inputText.trim()">发送</button>
+    </div>
+  </div>
+</div>
