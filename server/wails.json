@@ -14,7 +14,8 @@
     "language": "2052",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "AI英语课堂"
+    "shortcutName": "AI英语课堂",
+    "webview2": "download"
   },
   "info": {
     "companyName": "StudyEnglish",
