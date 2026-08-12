@@ -16,7 +16,7 @@ import (
 func main() {
 	cfg := config.Load()
 
-	db, err := database.Init(cfg.DBPath)
+	db, err := database.Init(cfg.DBPath, cfg.DataDir)
 	if err != nil {
 		log.Fatalf("数据库初始化失败: %v", err)
 	}

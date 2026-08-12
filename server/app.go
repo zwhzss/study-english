@@ -52,7 +52,7 @@ func (a *App) startup(ctx context.Context) {
 	// 启动后端服务（与 cmd/server/main.go 一致的初始化链路）
 	cfg := config.Load()
 	note("配置加载完成 DB=%s", cfg.DBPath)
-	db, err := database.Init(cfg.DBPath)
+	db, err := database.Init(cfg.DBPath, cfg.DataDir)
 	if err != nil {
 		note("数据库初始化失败: %v", err)
 		panic("数据库初始化失败: " + err.Error())
