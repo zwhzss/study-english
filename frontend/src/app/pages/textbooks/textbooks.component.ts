@@ -50,6 +50,9 @@ export class TextbooksComponent implements OnInit {
   importedContent: ImportedContent | null = null; // 导入课文内容
   loadingContent = false;
   error = '';
+  /** 全文朗读状态（readingIdx=当前播放句下标，-1 未播放） */
+  readingAll = false;
+  readingIdx = -1;
 
   // 角色头像 emoji
   private roleIcons: Record<string, string> = {
@@ -447,10 +450,23 @@ export class TextbooksComponent implements OnInit {
     this.audio.speak(text, url);
   }
 
-  /** 全文朗读：拼接所有对话轮次 */
+  /** 全文朗读：按对话顺序逐句播放，每句自动用对应角色的音色（teacher/boy/girl 不同声音） */
   playAll(): void {
-    const text = this.content?.dialogue.map((d) => d.text).join(' ');
-    if (text) this.audio.speak(text);
+    const items = (this.content?.dialogue ?? []).map((d) => ({ text: d.text, url: d.audio_url }));
+    if (!items.length) return;
+    this.readingAll = true;
+    this.readingIdx = -1;
+    this.audio.playQueue(items,
+      (i) => { this.readingIdx = i; },   // 高亮当前句
+      () => { this.readingAll = false; this.readingIdx = -1; } // 播完复位
+    );
+  }
+
+  /** 停止全文朗读 */
+  stopAll(): void {
+    this.audio.stop();
+    this.readingAll = false;
+    this.readingIdx = -1;
   }
 
   /** 对话角色是否足够（≥2 才可进行情景对话） */

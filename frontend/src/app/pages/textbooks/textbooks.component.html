@@ -112,7 +112,7 @@
             <div class="tags">
               <span class="tag scene">🏷️ 场景：{{ content.scene }}</span>
               <span class="tag src">来源：AI 创作（独立拓展）</span>
-              <button class="btn ghost" (click)="playAll()">🔊 全文朗读</button>
+              <button class="btn ghost" (click)="readingAll ? stopAll() : playAll()">{{ readingAll ? '⏹ 停止朗读' : '🔊 全文朗读' }}</button>
               <button class="btn ghost" (click)="stopPlay()">⏹ 停止</button>
               <a class="btn ghost" *ngIf="canDialogue()"
                  [routerLink]="['/dialogue', content.catalog_item_id]">🎭 与 AI 角色对话</a>
@@ -139,8 +139,8 @@
           <div class="dialogue">
             <h3>💬 多角色情景对话 <small>（点击气泡朗读该句）</small></h3>
             <div class="turns">
-              <div class="turn" *ngFor="let t of content.dialogue">
-                <div class="bubble" [style.--role-color]="roleColor(t.role)" (click)="play(t.text, t.audio_url)">
+              <div class="turn" *ngFor="let t of content.dialogue; index as i">
+                <div class="bubble" [class.reading]="readingIdx === i" [style.--role-color]="roleColor(t.role)" (click)="play(t.text, t.audio_url)">
                   <span class="avatar">{{ roleIcon(t.role) }}</span>
                   <div class="msg">
                     <span class="role-name" [style.color]="roleColor(t.role)">{{ t.role_name }} <i>{{ t.role }}</i></span>

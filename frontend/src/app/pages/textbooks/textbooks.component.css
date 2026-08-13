@@ -364,3 +364,6 @@
   .sidebar { width: 100%; max-height: none; position: static; }
   .main { padding: 16px; }
 }
+
+/* 全文朗读当前句高亮 */
+.bubble.reading { outline: 3px solid #1a73e8; transform: scale(1.02); }
