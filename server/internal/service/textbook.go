@@ -135,6 +135,30 @@ func builtinTemplate(name, stage, grade string) []catalogTemplate {
 	if contains(name, "冀教版") && contains(name, "九年级英语全一册") {
 		return jiji9Template()
 	}
+	if contains(name, "冀教版") && contains(name, "四年级英语上册") {
+		return jiji4UpTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "四年级英语下册") {
+		return jiji4DownTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "五年级英语上册") {
+		return jiji5UpTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "五年级英语下册") {
+		return jiji5DownTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "六年级英语上册") {
+		return jiji6UpTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "六年级英语下册") {
+		return jiji6DownTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "八年级英语上册") {
+		return jiji8UpTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "八年级英语下册") {
+		return jiji8DownTemplate()
+	}
 	// PEP 小学（三年级~六年级 × 上下册）精确匹配，杜绝上下册混用
 	if contains(name, "三年级英语上册") {
 		return pep3UpTemplate()
