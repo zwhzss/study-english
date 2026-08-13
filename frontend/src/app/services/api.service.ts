@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
-import { Observable, from, map, mergeMap, of, throwError } from 'rxjs';
+import { Observable, concatMap, from, map, mergeMap, of, throwError, timer } from 'rxjs';
 import { ApiResponse, AbilityProfile, AIConfig, CatalogNode, DialogueMessage, DialogueSession, ImportedContent, LessonContent, PronunciationRecord, ProviderSetting, Textbook, TextbookMeta } from '../models/models';
 
 /**
@@ -166,42 +166,29 @@ export class ApiService {
   /** 流式发送（SSE 或 Wails 事件）——返回 Observable 直接订阅消息块 */
   streamDialogue(sessionId: number, text: string, onComplete?: (ai: DialogueMessage) => void, onAudioCb?: (url: string) => void): Observable<string> {
     if (this.inWails()) {
-      // Wails 事件通道：订阅 ai:delta / ai:done（事件回调在 Angular zone 外，必须包 ngZone.run 触发变更检测）
-      return new Observable<string>((sub) => {
-        const rt = (window as any).runtime;
-        if (!rt?.EventsOn) { sub.error(new Error('runtime 不可用')); return; }
-        const onDelta = (_: any, data: any) => {
-          if (data?.session_id === sessionId) {
-            this.ngZone.run(() => sub.next(data.delta || ''));
-          }
-        };
-        const onDone = (_: any, data: any) => {
-          if (data?.session_id !== sessionId) return;
-          this.ngZone.run(() => {
-            if (data.error) sub.error(new Error(data.error));
-            else {
-              if (data.message && onComplete) onComplete(data.message);
-              sub.complete();
-            }
-          });
-        };
-        const onAudio = (_: any, data: any) => {
-          if (data?.session_id === sessionId && data.audio_url && onAudioCb) {
-            this.ngZone.run(() => onAudioCb(data.audio_url));
-          }
-        };
-        rt.EventsOn('aidelta', onDelta);
-        rt.EventsOn('aidone', onDone);
-        rt.EventsOn('aiaudio', onAudio);
-        this.wails<void>('StartStreamDialogue', sessionId, text).subscribe({
-          error: (e) => { sub.error(e); },
-        });
-        return () => {
-          rt.EventsOff('aidelta');
-          rt.EventsOff('aidone');
-          rt.EventsOff('aiaudio');
-        };
-      });
+      // Wails 通道：绑定调用一次性返回（可靠，已弃用事件——真实 Wails 事件 emit 后前端收不到）
+      // 前端模拟打字机逐字输出；TTS 音频 2 秒后轮询历史消息获取（异步合成）
+      return this.wails<{ user: DialogueMessage; ai: DialogueMessage }>('SendDialogueMessage', sessionId, text).pipe(
+        mergeMap(({ ai }) => {
+          onComplete?.(ai);
+          // 2 秒后拉历史拿合成好的 TTS 音频（edge-tts 异步合成约 1-2s）
+          setTimeout(() => {
+            this.wails<DialogueMessage[]>('ListDialogueMessages', sessionId).subscribe({
+              next: (msgs) => {
+                const lastAi = [...msgs].reverse().find((m) => !m.is_user);
+                if (lastAi?.audio_url) onAudioCb?.(lastAi.audio_url);
+              },
+              error: () => {},
+            });
+          }, 2000);
+          // 模拟打字机：每 30ms 输出 2 字符
+          const content = ai.content || '';
+          const chunks: string[] = [];
+          for (let i = 0; i < content.length; i += 2) chunks.push(content.slice(i, i + 2));
+          if (!chunks.length) chunks.push('');
+          return from(chunks).pipe(concatMap((c) => timer(30).pipe(map(() => c))));
+        })
+      );
     }
     // HTTP SSE（现有）
     return new Observable<string>((sub) => {

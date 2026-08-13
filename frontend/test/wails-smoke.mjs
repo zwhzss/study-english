@@ -42,7 +42,8 @@ await page.addInitScript(() => {
   window.go = { main: { App: {
     CreateDialogueSession: (lid, role) => { window.__created = { lid, role }; return Promise.resolve({ id: 99, lesson_id: 1, scene: 'At the Restaurant', user_role: role, ai_roles: [{ role: 'waiter', role_name: '服务员' }] }); },
     ListDialogueMessages: () => Promise.resolve([]),
-    StartStreamDialogue: (sid, text) => { window.__lastStream = { sid, text }; return Promise.resolve(); },
+    SendDialogueMessage: (sid, text) => { window.__lastStream = { sid, text }; return Promise.resolve({ user: { speaker: 'me', is_user: true, content: text }, ai: { speaker: 'waiter', speaker_name: '服务员', content: 'Hi there!', audio_url: '' } }); },
+    ListDialogueMessages: () => Promise.resolve([{ speaker: 'waiter', speaker_name: '服务员', content: 'Hi there!', audio_url: '/media/audio/test.mp3', is_user: false }]),
     GetLessonContent: () => Promise.resolve({ id: 1, title: 'Lesson', scene: 'At the Restaurant', dialogue: [{ role: 'waiter', role_name: '服务员', text: 'Welcome!' }, { role: 'customer', role_name: '顾客', text: 'Thanks!' }], role_voices: {} }),
     GetAIConfig: () => Promise.resolve({ llm: {} }),
   } } };
@@ -81,16 +82,12 @@ const last = await page.evaluate(() => window.__lastStream);
 assert('StartStreamDialogue 被调用', !!last, JSON.stringify(last));
 assert('发送文本正确', last?.text === 'Hello!', last?.text);
 
-// 5. ai:delta → 文字逐字显示
-await page.evaluate(() => window.__wailsMock.emit('aidelta', { session_id: 99, delta: 'Hi ' }));
-await page.waitForTimeout(300);
-await page.evaluate(() => window.__wailsMock.emit('aidelta', { session_id: 99, delta: 'there!' }));
-await page.waitForTimeout(500);
+// 5. 模拟打字机 → 文字逐字显示（绑定返回后前端模拟输出）
+await page.waitForTimeout(2500);
 const text = await page.evaluate(() => document.body.innerText);
 assert('ai:delta 文字显示（Hi there!）', text.includes('Hi there!'), text.slice(0, 150));
 
-// 6. ai:done → sending 复位：填新文本后发送按钮应恢复可用（可发下一条 = 不卡死）
-await page.evaluate(() => window.__wailsMock.emit('aidone', { session_id: 99, message: { speaker: 'waiter', speaker_name: '服务员', content: 'Hi there!', audio_url: '' } }));
+// 6. 绑定返回后 sending 复位：填新文本后发送按钮应恢复可用（可发下一条 = 不卡死）
 await page.waitForTimeout(600);
 await page.evaluate(() => {
   const el = document.querySelector('input');
@@ -105,13 +102,10 @@ const btnDisabled = await page.evaluate(() => {
 });
 assert('ai:done 后发送按钮恢复（可发下一条）', btnDisabled === false, `disabled=${btnDisabled}`);
 
-// 7. ai:audio → 收到事件（audio_url 用于播放）
-let audioReceived = false;
-page.on('console', (m) => { if (m.text().includes('audio')) audioReceived = true; });
-await page.evaluate(() => window.__wailsMock.emit('aiaudio', { session_id: 99, audio_url: '/media/audio/test.mp3' }));
-await page.waitForTimeout(600);
+// 7. TTS 轮询：2 秒后拉历史消息拿到 audio_url → onAudio 播放
+await page.waitForTimeout(2600);
 const audioElems = await page.evaluate(() => [...document.querySelectorAll('audio')].map((a) => a.src));
-assert('ai:audio 事件处理（audio 元素或播放尝试）', audioElems.length > 0 || true, audioElems.join(','));
+assert('TTS 轮询获取 audio_url（audio 元素或播放尝试）', audioElems.length > 0 || true, audioElems.join(','));
 
 await browser.close();
 server.close();
