@@ -6,6 +6,7 @@ import { ApiService } from '../../services/api.service';
 import { LessonContent } from '../../models/models';
 import { AudioService } from '../../services/audio.service';
 import { SpeechService } from '../../services/speech.service';
+import { timeout } from 'rxjs';
 
 interface RoleOption {
   role: string;
@@ -158,7 +159,6 @@ export class DialogueComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** fetch + ReadableStream 解析 SSE（event: delta → done） */
   /** 流式聊天：双通道（Wails 事件 / HTTP SSE），逐字填充 AI 气泡 */
   private async streamChat(sessionId: number, text: string, aiBubble: ChatMsg, signal: AbortSignal): Promise<void> {
     await new Promise<void>((resolve, reject) => {
@@ -170,7 +170,7 @@ export class DialogueComponent implements OnInit, OnDestroy {
         aiBubble.audio_url = ai.audio_url;
         this.audio.speak(ai.content, ai.audio_url);
         this.scrollToBottom();
-      }).subscribe({
+      }).pipe(timeout(30000)).subscribe({
         next: (delta) => {
           aiBubble.content += delta;
           this.scrollToBottom();
