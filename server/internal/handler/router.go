@@ -62,10 +62,17 @@ func NewRouter(cfg *config.Config, svc *service.TextbookService, dsvc *service.D
 
 	api := r.Group("/api")
 	{
-		api.POST("/textbooks", h.CreateTextbook)                  // 创建教材 + 初始化目录
-		api.PUT("/textbooks/order", h.ReorderTextbooks)           // 调整教材库顺序
-		api.GET("/textbooks", h.ListTextbooks)                    // 教材列表
-		api.DELETE("/textbooks/:id", h.DeleteTextbook)            // 删除教材（连带内容）
+		api.POST("/textbooks", h.CreateTextbook)        // 创建教材 + 初始化目录
+		api.PUT("/textbooks/order", h.ReorderTextbooks) // 调整教材库顺序
+		api.GET("/textbooks", h.ListTextbooks)          // 教材列表
+		api.DELETE("/textbooks/:id", h.DeleteTextbook)  // 删除教材（连带内容）
+
+		// 目录 CRUD（自定义单元/课时）
+		api.POST("/catalog-items", h.CreateCatalogItem)           // 新增课时（含新单元）
+		api.PUT("/catalog-items/:id", h.UpdateCatalogItem)        // 编辑课时
+		api.DELETE("/catalog-items/:id", h.DeleteCatalogItem)     // 删除课时
+		api.PUT("/catalog-items/rename-unit", h.RenameUnit)       // 重命名单元
+		api.DELETE("/catalog-items/unit", h.DeleteUnit)           // 删除单元
 		api.GET("/textbooks/meta", h.TextbookMeta)                // 常用教材预设（下拉列表）
 		api.GET("/textbooks/:id/catalog", h.GetCatalog)           // 目录树
 		api.PUT("/textbooks/:id/catalog/order", h.ReorderCatalog) // 调整目录顺序（拖拽保存）

@@ -69,6 +69,9 @@
             <div class="unit-title">
               📦 {{ node.unit }} · {{ node.title }}
               <span class="order-btns">
+                <button class="ob" (click)="addLesson(ui)" title="在此单元新增课时">➕课时</button>
+                <button class="ob" (click)="renameUnitNode(node)" title="重命名单元">✏️</button>
+                <button class="ob" (click)="deleteUnitNode(node)" title="删除单元">🗑</button>
                 <button class="ob" (click)="moveUnit(-1, ui)" [disabled]="ui === 0" title="上移单元">↑</button>
                 <button class="ob" (click)="moveUnit(1, ui)" [disabled]="ui === catalog.length - 1" title="下移单元">↓</button>
               </span>
@@ -81,6 +84,8 @@
                 <span class="l-title">{{ l.title }}</span>
                 <span class="scene" *ngIf="l.scene">🏷️ {{ l.scene }}</span>
                 <span class="l-order">
+                  <button class="ob mini" (click)="editLesson(node, l); $event.stopPropagation()" title="编辑课时">✏️</button>
+                  <button class="ob mini" (click)="deleteLesson(l); $event.stopPropagation()" title="删除课时">🗑</button>
                   <button class="ob mini" (click)="moveLesson(ui, li, -1); $event.stopPropagation()" [disabled]="li === 0" title="上移课时">↑</button>
                   <button class="ob mini" (click)="moveLesson(ui, li, 1); $event.stopPropagation()" [disabled]="li === node.lessons.length - 1" title="下移课时">↓</button>
                 </span>
@@ -88,6 +93,9 @@
             </div>
           </div>
         </ng-container>
+        <div class="catalog-actions" *ngIf="catalog.length">
+          <button class="btn ghost" (click)="addUnit()">➕ 新增单元</button>
+        </div>
         <p *ngIf="!loadingCatalog && !catalog.length" class="empty">该教材暂无目录，请先创建教材。</p>
       </div>
     </section>

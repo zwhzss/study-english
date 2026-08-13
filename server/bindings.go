@@ -267,6 +267,28 @@ func (a *App) TTSStatus() (*TTSStatusData, error) {
 	return st, nil
 }
 
+// ========== 目录 CRUD ==========
+
+func (a *App) CreateCatalogItem(textbookID uint, unit, lesson, title, scene string) (*model.CatalogItem, error) {
+	return a.tbSvc.CreateCatalogItem(textbookID, unit, lesson, title, scene)
+}
+
+func (a *App) UpdateCatalogItem(id uint, unit, lesson, title, scene string) error {
+	return a.tbSvc.UpdateCatalogItem(id, unit, lesson, title, scene)
+}
+
+func (a *App) DeleteCatalogItem(id uint) error {
+	return a.tbSvc.DeleteCatalogItem(id)
+}
+
+func (a *App) RenameUnit(textbookID uint, oldUnit, newUnit string) error {
+	return a.tbSvc.RenameUnit(textbookID, oldUnit, newUnit)
+}
+
+func (a *App) DeleteUnit(textbookID uint, unit string) error {
+	return a.tbSvc.DeleteUnit(textbookID, unit)
+}
+
 // ========== 媒体文件 ==========
 // MediaURL 把 /media/xxx 相对路径转为 file:// 绝对路径（Wails 下前端直接播放本地音频/图片）
 

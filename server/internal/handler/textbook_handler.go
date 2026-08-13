@@ -200,7 +200,88 @@ func (h *TextbookHandler) ListTextbooks(c *gin.Context) {
 }
 
 // ReorderTextbooks PUT /api/textbooks/order 调整教材库顺序
-// body: {"ids": [教材id新顺序...]}
+// CatalogItemCRUD 目录 CRUD 接口
+
+// CreateCatalogItem POST /api/catalog-items 新增课时（unit 新值即新单元）
+func (h *TextbookHandler) CreateCatalogItem(c *gin.Context) {
+	var req struct {
+		TextbookID uint   `json:"textbook_id"`
+		Unit       string `json:"unit"`
+		Lesson     string `json:"lesson"`
+		Title      string `json:"title"`
+		Scene      string `json:"scene"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+	item, err := h.svc.CreateCatalogItem(req.TextbookID, req.Unit, req.Lesson, req.Title, req.Scene)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": item})
+}
+
+// UpdateCatalogItem PUT /api/catalog-items/:id 编辑课时
+func (h *TextbookHandler) UpdateCatalogItem(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var req struct {
+		Unit   string `json:"unit"`
+		Lesson string `json:"lesson"`
+		Title  string `json:"title"`
+		Scene  string `json:"scene"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	if err := h.svc.UpdateCatalogItem(uint(id), req.Unit, req.Lesson, req.Title, req.Scene); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "课时已更新"})
+}
+
+// DeleteCatalogItem DELETE /api/catalog-items/:id 删除课时
+func (h *TextbookHandler) DeleteCatalogItem(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.svc.DeleteCatalogItem(uint(id)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "课时已删除"})
+}
+
+// RenameUnit PUT /api/catalog-items/rename-unit 重命名单元
+func (h *TextbookHandler) RenameUnit(c *gin.Context) {
+	var req struct {
+		TextbookID uint   `json:"textbook_id"`
+		OldUnit    string `json:"old_unit"`
+		NewUnit    string `json:"new_unit"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		return
+	}
+	if err := h.svc.RenameUnit(req.TextbookID, req.OldUnit, req.NewUnit); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "单元已重命名"})
+}
+
+// DeleteUnit DELETE /api/catalog-items/unit 删除单元（连带课时）
+func (h *TextbookHandler) DeleteUnit(c *gin.Context) {
+	var req struct {
+		TextbookID uint   `json:"textbook_id"`
+		Unit       string `json:"unit"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	if err := h.svc.DeleteUnit(req.TextbookID, req.Unit); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "单元已删除"})
+}
+
 func (h *TextbookHandler) ReorderTextbooks(c *gin.Context) {
 	var req struct {
 		IDs []uint `json:"ids"`

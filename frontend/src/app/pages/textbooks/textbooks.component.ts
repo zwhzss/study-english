@@ -247,6 +247,69 @@ export class TextbooksComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ---- 目录 CRUD（自定义单元/课时） ----
+  private reloadCatalog(): void {
+    if (this.selectedTextbook) this.loadCatalog(this.selectedTextbook.id);
+  }
+
+  addUnit(): void {
+    const unit = prompt('请输入新单元名（如 Unit 9）：');
+    if (!unit?.trim()) return;
+    const title = prompt('请输入第一课课文标题：');
+    if (!title?.trim()) return;
+    this.api.createCatalogItem(this.selectedTextbook!.id, unit.trim(), 'Lesson 1', title.trim(), '').subscribe({
+      next: () => { this.notice = '✅ 新单元已添加'; this.reloadCatalog(); },
+      error: (e) => { this.error = '添加失败：' + this.errMsg(e); },
+    });
+  }
+
+  addLesson(ui: number): void {
+    const node = this.catalog[ui];
+    const title = prompt('请输入课文标题：');
+    if (!title?.trim()) return;
+    const lesson = prompt('课时名（如 Lesson 7）：', 'Lesson ' + (node.lessons.length + 1)) || '';
+    this.api.createCatalogItem(this.selectedTextbook!.id, node.unit, lesson, title.trim(), '').subscribe({
+      next: () => { this.notice = '✅ 课时已添加'; this.reloadCatalog(); },
+      error: (e) => { this.error = '添加失败：' + this.errMsg(e); },
+    });
+  }
+
+  renameUnitNode(node: any): void {
+    const name = prompt('重命名单元（当前：' + node.unit + '）：', node.unit);
+    if (!name?.trim() || name.trim() === node.unit) return;
+    this.api.renameUnit(this.selectedTextbook!.id, node.unit, name.trim()).subscribe({
+      next: () => { this.notice = '✅ 单元已重命名'; this.reloadCatalog(); },
+      error: (e) => { this.error = '重命名失败：' + this.errMsg(e); },
+    });
+  }
+
+  deleteUnitNode(node: any): void {
+    if (!confirm(`删除单元「${node.unit}」及其全部 ${node.lessons.length} 个课时（含内容）？此操作不可恢复！`)) return;
+    this.api.deleteUnit(this.selectedTextbook!.id, node.unit).subscribe({
+      next: () => { this.notice = '✅ 单元已删除'; this.reloadCatalog(); },
+      error: (e) => { this.error = '删除失败：' + this.errMsg(e); },
+    });
+  }
+
+  editLesson(node: any, l: any): void {
+    const title = prompt('课文标题：', l.title);
+    if (!title?.trim()) return;
+    const unit = prompt('所属单元名（可移动到其它单元）：', node.unit);
+    const scene = prompt('场景（可选）：', l.scene || '');
+    this.api.updateCatalogItem(l.id, unit?.trim() || '', l.lesson, title.trim(), scene || '').subscribe({
+      next: () => { this.notice = '✅ 课时已更新'; this.reloadCatalog(); },
+      error: (e) => { this.error = '更新失败：' + this.errMsg(e); },
+    });
+  }
+
+  deleteLesson(l: any): void {
+    if (!confirm(`删除课时「${l.title}」（含已生成的 AI/导入内容）？`)) return;
+    this.api.deleteCatalogItem(l.id).subscribe({
+      next: () => { this.notice = '✅ 课时已删除'; this.reloadCatalog(); },
+      error: (e) => { this.error = '删除失败：' + this.errMsg(e); },
+    });
+  }
+
   /** 保存目录顺序（拖拽后自动调用） */
   saveOrder(): void {
     if (!this.selectedTextbook) return;

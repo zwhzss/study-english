@@ -626,6 +626,95 @@ func (s *TextbookService) ReorderCatalog(textbookID uint, ids []uint) error {
 	})
 }
 
+// CreateCatalogItem 新增课时（unit 新值即新单元）。Level 沿用该教材已有课时，OrderNo 排末尾
+func (s *TextbookService) CreateCatalogItem(textbookID uint, unit, lesson, title, scene string) (*model.CatalogItem, error) {
+	unit = strings.TrimSpace(unit)
+	title = strings.TrimSpace(title)
+	if unit == "" || title == "" {
+		return nil, errors.New("单元名和课文标题不能为空")
+	}
+	level := "Grade1"
+	var sample model.CatalogItem
+	if err := s.db.Where("textbook_id = ?", textbookID).Order("id").First(&sample).Error; err == nil && sample.Level != "" {
+		level = sample.Level
+	}
+	var maxNo int
+	s.db.Model(&model.CatalogItem{}).Where("textbook_id = ?", textbookID).Select("COALESCE(MAX(order_no),0)").Scan(&maxNo)
+	item := &model.CatalogItem{
+		TextbookID: textbookID, Level: level, Unit: unit,
+		Lesson: strings.TrimSpace(lesson), Title: title, Scene: scene,
+		OrderNo: maxNo + 1, Status: model.StatusPending,
+	}
+	if err := s.db.Create(item).Error; err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+// UpdateCatalogItem 编辑课时（unit/lesson/title/scene，可移动到别的单元）
+func (s *TextbookService) UpdateCatalogItem(id uint, unit, lesson, title, scene string) error {
+	updates := map[string]any{}
+	if unit != "" {
+		updates["unit"] = strings.TrimSpace(unit)
+	}
+	if lesson != "" {
+		updates["lesson"] = strings.TrimSpace(lesson)
+	}
+	if title != "" {
+		updates["title"] = strings.TrimSpace(title)
+	}
+	if scene != "" {
+		updates["scene"] = strings.TrimSpace(scene)
+	}
+	if len(updates) == 0 {
+		return errors.New("没有要修改的内容")
+	}
+	return s.db.Model(&model.CatalogItem{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// DeleteCatalogItem 删除课时（连带其 AI 内容 / 导入内容 / 相关对话）
+func (s *TextbookService) DeleteCatalogItem(id uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("catalog_item_id = ?", id).Delete(&model.AIContent{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("catalog_item_id = ?", id).Delete(&model.ImportedContent{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&model.CatalogItem{}, id).Error
+	})
+}
+
+// RenameUnit 重命名单元：批量改该教材下所有同 Unit 字段的课时
+func (s *TextbookService) RenameUnit(textbookID uint, oldUnit, newUnit string) error {
+	oldUnit = strings.TrimSpace(oldUnit)
+	newUnit = strings.TrimSpace(newUnit)
+	if oldUnit == "" || newUnit == "" {
+		return errors.New("单元名不能为空")
+	}
+	return s.db.Model(&model.CatalogItem{}).Where("textbook_id = ? AND unit = ?", textbookID, oldUnit).Update("unit", newUnit).Error
+}
+
+// DeleteUnit 删除单元：连带该单元下所有课时及其内容
+func (s *TextbookService) DeleteUnit(textbookID uint, unit string) error {
+	var ids []uint
+	if err := s.db.Model(&model.CatalogItem{}).Where("textbook_id = ? AND unit = ?", textbookID, unit).Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, id := range ids {
+			_ = tx.Where("catalog_item_id = ?", id).Delete(&model.AIContent{}).Error
+			_ = tx.Where("catalog_item_id = ?", id).Delete(&model.ImportedContent{}).Error
+		}
+		if len(ids) > 0 {
+			if err := tx.Where("id IN ?", ids).Delete(&model.CatalogItem{}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // TranscribeASR 语音识别：音频 → 文本（registry 的 ASR Provider，未配置 Key 时 mock 占位）
 func (s *TextbookService) TranscribeASR(ctx context.Context, audio []byte, format string) (string, error) {
 	return s.reg.ASR().Transcribe(ctx, audio, format)

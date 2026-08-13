@@ -104,6 +104,28 @@ export class ApiService {
     return this.http.post<ApiResponse<{ lessons: number; downloaded: number; failed: number }>>(`${this.base}/images/migrate`, {});
   }
 
+  /** 目录 CRUD */
+  createCatalogItem(textbookId: number, unit: string, lesson: string, title: string, scene = ''): Observable<ApiResponse<{ id: number }>> {
+    if (this.inWails()) return this.wails<{ id: number }>('CreateCatalogItem', textbookId, unit, lesson, title, scene).pipe(map((d) => ({ data: d })));
+    return this.http.post<ApiResponse<{ id: number }>>(`${this.base}/catalog-items`, { textbook_id: textbookId, unit, lesson, title, scene });
+  }
+  updateCatalogItem(id: number, unit: string, lesson: string, title: string, scene = ''): Observable<ApiResponse<{ ok: boolean; message: string }>> {
+    if (this.inWails()) return this.wails<void>('UpdateCatalogItem', id, unit, lesson, title, scene).pipe(map(() => ({ data: { ok: true, message: '已更新' } })));
+    return this.http.put<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/catalog-items/${id}`, { unit, lesson, title, scene });
+  }
+  deleteCatalogItem(id: number): Observable<ApiResponse<{ ok: boolean; message: string }>> {
+    if (this.inWails()) return this.wails<void>('DeleteCatalogItem', id).pipe(map(() => ({ data: { ok: true, message: '已删除' } })));
+    return this.http.delete<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/catalog-items/${id}`);
+  }
+  renameUnit(textbookId: number, oldUnit: string, newUnit: string): Observable<ApiResponse<{ ok: boolean; message: string }>> {
+    if (this.inWails()) return this.wails<void>('RenameUnit', textbookId, oldUnit, newUnit).pipe(map(() => ({ data: { ok: true, message: '已重命名' } })));
+    return this.http.put<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/catalog-items/rename-unit`, { textbook_id: textbookId, old_unit: oldUnit, new_unit: newUnit });
+  }
+  deleteUnit(textbookId: number, unit: string): Observable<ApiResponse<{ ok: boolean; message: string }>> {
+    if (this.inWails()) return this.wails<void>('DeleteUnit', textbookId, unit).pipe(map(() => ({ data: { ok: true, message: '已删除' } })));
+    return this.http.delete<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/catalog-items/unit`, { body: { textbook_id: textbookId, unit } });
+  }
+
   getTextbookMeta(): Observable<ApiResponse<TextbookMeta>> {
     if (this.inWails()) return this.wails<TextbookMeta>('TextbookMeta').pipe(map((d) => ({ data: d })));
     return this.http.get<ApiResponse<TextbookMeta>>(`${this.base}/textbooks/meta`);
