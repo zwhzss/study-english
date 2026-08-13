@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,7 +21,7 @@ import {
   templateUrl: './textbooks.component.html',
   styleUrls: ['./textbooks.component.css'],
 })
-export class TextbooksComponent implements OnInit {
+export class TextbooksComponent implements OnInit, OnDestroy {
   // 创建表单
   form = { name: '', publisher: '', stage: '初中', grade: '七年级' };
   creating = false;
@@ -67,6 +67,11 @@ export class TextbooksComponent implements OnInit {
 
   constructor(private api: ApiService, private audio: AudioService) {
     this.destroyRef = inject(DestroyRef);
+  }
+
+  ngOnDestroy(): void {
+    this.audio.stop(); // 离开页面中止朗读
+    this.cancelPolling();
   }
 
   private destroyRef!: DestroyRef;
@@ -225,6 +230,9 @@ export class TextbooksComponent implements OnInit {
     this.content = null;
     this.importedContent = null;
     this.activeTab = 'ai';
+    this.audio.stop(); // 切换课时中止朗读
+    this.readingAll = false;
+    this.readingIdx = -1;
     this.error = '';
     this.notice = '';
     this.cancelPolling(); // 取消当前轮询订阅（不删除进行中任务记录）
@@ -274,6 +282,9 @@ export class TextbooksComponent implements OnInit {
     this.activeTab = tab;
     this.error = '';
     this.notice = '';
+    this.audio.stop(); // 切 Tab 中止朗读
+    this.readingAll = false;
+    this.readingIdx = -1;
     this.loadContent(this.selectedLesson.id, tab);
   }
 
@@ -287,17 +298,9 @@ export class TextbooksComponent implements OnInit {
       },
       error: (e) => {
         this.loadingContent = false;
-        // 未生成内容不报错（显示对应空态）
+        // 未生成内容不报错（显示对应空态；AI 与导入课文独立，用户手动点 Tab 切换）
         if (kind === 'imported') this.importedContent = null;
-        else {
-          this.content = null;
-          // AI 内容为空但课时有内容（导入的真实课文）→ 自动切到「真实课文」Tab
-          if (this.selectedLesson?.has_content) {
-            this.activeTab = 'imported';
-            this.loadContent(this.selectedLesson.id, 'imported');
-            return;
-          }
-        }
+        else this.content = null;
         this.error = '';
       },
     });
