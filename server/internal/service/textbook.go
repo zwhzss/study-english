@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
@@ -754,10 +755,27 @@ func (s *TextbookService) DeleteTextbook(id uint) error {
 }
 
 // lessonPayload LLM 生成内容的 JSON Schema（与 model 结构对应）
+// flexibleString 容错字符串：LLM 偶发把本应字符串的字段输出成数字（如 "unit":1），自动转字符串
+type flexibleString string
+
+func (f *flexibleString) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) >= 2 && data[0] == '"' {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		*f = flexibleString(s)
+		return nil
+	}
+	*f = flexibleString(string(data))
+	return nil
+}
+
 type lessonPayload struct {
-	Unit          string               `json:"unit"`
-	Title         string               `json:"title"`
-	Scene         string               `json:"scene"`
+	Unit          flexibleString       `json:"unit"`
+	Title         flexibleString       `json:"title"`
+	Scene         flexibleString       `json:"scene"`
 	Dialogue      []model.DialogueTurn `json:"dialogue"`
 	KeyVocab      []model.VocabItem    `json:"key_vocab"`
 	GrammarPoints []model.GrammarPoint `json:"grammar_points"`
@@ -845,8 +863,8 @@ func (s *TextbookService) PullLessonContent(ctx context.Context, catalogItemID u
 	content := &model.AIContent{
 		CatalogItemID: item.ID,
 		Unit:          item.Unit,
-		Title:         p.Title,
-		Scene:         p.Scene,
+		Title:         string(p.Title),
+		Scene:         string(p.Scene),
 		DialogueJSON:  mustJSON(p.Dialogue),
 		KeyVocabJSON:  mustJSON(p.KeyVocab),
 		GrammarJSON:   mustJSON(p.GrammarPoints),
