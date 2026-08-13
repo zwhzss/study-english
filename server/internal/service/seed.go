@@ -54,6 +54,11 @@ var TextbookSeeds = []TextbookSeed{
 	{Name: "牛津译林版八年级英语下册", Publisher: "译林出版社", Stage: "初中", Grade: "八年级"},
 	{Name: "牛津译林版九年级英语上册", Publisher: "译林出版社", Stage: "初中", Grade: "九年级"},
 	// 高中
+	// 冀教版（河北教育出版社）
+	{Name: "冀教版三年级英语下册", Publisher: "河北教育出版社", Stage: "小学", Grade: "三年级"},
+	{Name: "冀教版七年级英语上册", Publisher: "河北教育出版社", Stage: "初中", Grade: "七年级"},
+	{Name: "冀教版七年级英语下册", Publisher: "河北教育出版社", Stage: "初中", Grade: "七年级"},
+	{Name: "冀教版九年级英语全一册", Publisher: "河北教育出版社", Stage: "初中", Grade: "九年级"},
 	{Name: "人教版高中英语必修一", Publisher: "人民教育出版社", Stage: "高中", Grade: "高一"},
 	{Name: "人教版高中英语必修二", Publisher: "人民教育出版社", Stage: "高中", Grade: "高一"},
 	{Name: "人教版高中英语必修三", Publisher: "人民教育出版社", Stage: "高中", Grade: "高二"},

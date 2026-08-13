@@ -122,6 +122,19 @@ type catalogTemplate struct {
 
 // builtinTemplate 内置目录模板（教材骨架先行，按 教材名+年级+册 精确匹配真实目录）
 func builtinTemplate(name, stage, grade string) []catalogTemplate {
+	// 冀教版（河北教育出版社）：带版本前缀组合匹配，优先于同名年级/册判断
+	if contains(name, "冀教版") && contains(name, "三年级英语下册") {
+		return jiji3DownTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "七年级英语上册") {
+		return jiji7UpTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "七年级英语下册") {
+		return jiji7DownTemplate()
+	}
+	if contains(name, "冀教版") && contains(name, "九年级英语全一册") {
+		return jiji9Template()
+	}
 	// PEP 小学（三年级~六年级 × 上下册）精确匹配，杜绝上下册混用
 	if contains(name, "三年级英语上册") {
 		return pep3UpTemplate()
