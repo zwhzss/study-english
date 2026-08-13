@@ -264,8 +264,13 @@ func cfgToConfig(cfg *model.AIConfig) *config.Config {
 	c.TTSAPIKey = cfg.TTS.APIKey
 	c.TTSModel = cfg.TTS.Model
 	c.TTSVoice = cfg.TTS.Extra
+	c.TTSType = cfg.TTS.Provider // edge（本地免费）/ openai（硅基等） / mock
+	if c.TTSType == "" {
+		c.TTSType = "openai"
+	}
 	if cfg.TTS.Provider == "mock" {
 		c.TTSAPIKey = ""
+		c.TTSType = "mock"
 	}
 	c.ImageBaseURL = cfg.Image.BaseURL
 	c.ImageAPIKey = cfg.Image.APIKey

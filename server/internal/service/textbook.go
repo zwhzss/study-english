@@ -634,7 +634,7 @@ type lessonPayload struct {
 const contentSystemPrompt = `你是一位专业的少儿英语教材编写专家。请为一个真实生活场景编写一节英语课的内容，要求：
 1. 教学理念：能力型培养，非应试刷题。全部内容围绕真实日常沟通场景展开。
 2. 语言难度：面向初中生（简单词汇、简短句式），地道且自然。
-3. 对话要求：3-7 轮多角色真实对话（角色 role 用英文标识如 waiter/customer，role_name 用中文），模拟真实沟通节奏，包含开场白、请求、回应、结束语。
+3. 对话要求：3-7 轮多角色真实对话（角色 role 用英文标识，role_name 用中文），模拟真实沟通节奏，包含开场白、请求、回应、结束语。**角色必须多样化（2-4 个不同角色），role 字段必须且只能从以下角色库中挑选（禁止自创名字如 alex/mia/student1，禁止编号如 student1/student2）**：boy(男孩)、girl(女孩)、student(学生)、teacher(教师)、male_teacher(男教师)、grandpa(爷爷)、grandma(奶奶)、brother(哥哥)、sister(姐姐)、uncle(叔叔)、aunt(阿姨)、mother(妈妈)、father(爸爸)、waiter(服务员)、customer(顾客)、clerk(店员)、driver(司机)、farmer(农民)、worker(工人)、doctor(医生)、nurse(护士)、police(警察)、friend(朋友)。同一段对话中不同说话者必须使用不同的 role（系统会为每个 role 分配不同的语音音色），不要所有对话都用同一个角色。
 4. 词汇：5 个左右本课核心词，含音标（IPA）、中文释义、例句。
 5. 语法：2 个左右高频语法点/地道表达，含解释与例句。
 6. 练习：2-3 个能力型练习（type 为 roleplay/speak/write），无选择题，含示例与提示。
