@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-
 	"study-english/server/internal/ai"
 	"study-english/server/internal/model"
 	"study-english/server/internal/service"
@@ -148,29 +146,18 @@ func (a *App) SendDialogueMessage(sessionID uint, text string) (*DialogueReply, 
 	return &DialogueReply{User: userMsg, AI: aiMsg}, nil
 }
 
-// StartStreamDialogue 流式发送：逐字通过 Wails 事件 ai:delta 推送，结束推送 ai:done，
-// TTS 音频合成完成后推送 ai:audio（前端立即播放，不等音频）
+// StartStreamDialogue 对话流式入口（前端主动调用，Go 返回绑定结果——符合"请求-响应走绑定、事件只用于广播"架构）
+// 回复通过绑定返回值一次性返回（前端模拟打字机）；TTS 音频异步合成后由前端轮询 ListDialogueMessages 获取
 func (a *App) StartStreamDialogue(sessionID uint, text string) error {
 	a.logf("对话流式开始 session=%d text=%q", sessionID, text)
-	// 注册 TTS 完成回调（本次会话）：合成完成 → 推送 ai:audio 事件
-	a.dgSvc.SetAudioCallback(func(sid uint, url string) {
-		runtime.EventsEmit(a.ctx, "aiaudio", map[string]any{"session_id": sid, "audio_url": url})
-		a.logf("已推送 aiaudio 事件 session=%d url=%s", sid, url)
-	})
 	go func() {
 		t0 := time.Now()
-		_, aiMsg, err := a.dgSvc.StreamReply(context.Background(), sessionID, text, func(delta string) error {
-			runtime.EventsEmit(a.ctx, "aidelta", map[string]any{"session_id": sessionID, "delta": delta})
-			return nil
-		})
+		_, aiMsg, err := a.dgSvc.StreamReply(context.Background(), sessionID, text, nil)
 		a.logf("对话流式完成 session=%d 耗时 %.1fs err=%v", sessionID, time.Since(t0).Seconds(), err)
 		if err != nil {
-			runtime.EventsEmit(a.ctx, "aidone", map[string]any{"session_id": sessionID, "error": err.Error()})
-			a.logf("已推送 aidone(error) session=%d", sessionID)
-			return
+			a.logf("对话失败: %v", err)
 		}
-		runtime.EventsEmit(a.ctx, "aidone", map[string]any{"session_id": sessionID, "message": aiMsg})
-		a.logf("已推送 aidone 事件 session=%d", sessionID)
+		_ = aiMsg
 	}()
 	return nil
 }
