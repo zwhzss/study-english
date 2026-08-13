@@ -124,7 +124,13 @@ export class ApiService {
   }
 
   getLessonContent(lessonId: number, kind = 'ai'): Observable<ApiResponse<LessonContent | ImportedContent>> {
-    if (this.inWails()) return this.wails<LessonContent | ImportedContent>('GetLessonContent', lessonId, kind).pipe(map((d) => ({ data: d })));
+    if (this.inWails()) {
+      // kind=imported 必须走 GetImportedContent 绑定（GetLessonContent 绑定只返回 AIContent）
+      if (kind === 'imported') {
+        return this.wails<ImportedContent>('GetImportedContent', lessonId).pipe(map((d) => ({ data: d })));
+      }
+      return this.wails<LessonContent>('GetLessonContent', lessonId, 'ai').pipe(map((d) => ({ data: d })));
+    }
     return this.http.get<ApiResponse<LessonContent | ImportedContent>>(`${this.base}/lessons/${lessonId}/content?kind=${kind}`);
   }
 
