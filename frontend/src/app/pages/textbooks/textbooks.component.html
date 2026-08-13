@@ -10,37 +10,7 @@
     </div>
 
     <div class="side-body" *ngIf="!sidebarCollapsed">
-      <div class="side-links">
-        <a class="ability-link" routerLink="/ability">📊 能力画像</a>
-        <a class="ability-link" routerLink="/pronunciation">🗣️ 发音评测</a>
-        <a class="ability-link" routerLink="/config">⚙️ 模型配置</a>
-        <button class="ability-link btn-link" (click)="fixImages()" title="全库：把历史课文外链图片下载到本地">🗜 修复外链图片</button>
-        <button class="ability-link btn-link" (click)="backfillAudio()" title="全库：补合成历史课文缺失音频">🎵 补合成音频</button>
-      </div>
-
-      <div class="create-box">
-        <h3>➕ 同步新教材</h3>
-        <select [(ngModel)]="form.stage" (change)="onStageChange()">
-          <option *ngFor="let s of meta?.stages || ['小学','初中','高中','成人']">{{ s }}</option>
-        </select>
-        <select [(ngModel)]="form.name" (change)="onTextbookSelect()">
-          <option value="">-- 选择常用教材 --</option>
-          <option *ngFor="let t of filteredTextbooks" [value]="t.name">{{ t.name }}</option>
-          <option value="__custom__">✍️ 自定义教材…</option>
-        </select>
-        <input *ngIf="customName" [(ngModel)]="form.name" placeholder="教材名称，如 人教版七年级英语上册" />
-        <div class="row">
-          <input [(ngModel)]="form.publisher" placeholder="出版社（自动带出）" />
-        </div>
-        <select [(ngModel)]="form.grade">
-          <option *ngFor="let g of gradeOptions">{{ g }}</option>
-        </select>
-        <button class="btn primary" (click)="createTextbook()" [disabled]="creating || !form.name.trim()">
-          {{ creating ? '初始化目录中…' : '创建并初始化目录' }}
-        </button>
-        <p class="hint">从下拉选择常用教材，出版社/年级自动带出，避免手工输入歧义</p>
-      </div>
-
+      <!-- 教材库（主体，占主要空间） -->
       <div class="tb-list" *ngIf="libraryTextbooks.length">
         <h3>📚 教材库（{{ libraryTextbooks.length }}/{{ textbooks.length }}）</h3>
         <div class="tb-item" *ngFor="let tb of libraryTextbooks; let i = index"
@@ -55,7 +25,46 @@
           <button class="tb-del" (click)="removeTextbook(tb, $event)" title="删除该教材（连带内容）">🗑</button>
         </div>
       </div>
-      <p class="hint" *ngIf="!libraryTextbooks.length && textbooks.length">该阶段暂无教材，可在上方创建</p>
+      <p class="hint" *ngIf="!libraryTextbooks.length && textbooks.length">该阶段暂无教材，可在下方「同步新教材」创建</p>
+
+      <!-- 折叠：同步新教材 -->
+      <details class="fold-panel">
+        <summary>➕ 同步新教材</summary>
+        <div class="create-box">
+          <select [(ngModel)]="form.stage" (change)="onStageChange()">
+            <option *ngFor="let s of meta?.stages || ['小学','初中','高中','成人']">{{ s }}</option>
+          </select>
+          <select [(ngModel)]="form.name" (change)="onTextbookSelect()">
+            <option value="">-- 选择常用教材 --</option>
+            <option *ngFor="let t of filteredTextbooks" [value]="t.name">{{ t.name }}</option>
+            <option value="__custom__">✍️ 自定义教材…</option>
+          </select>
+          <input *ngIf="customName" [(ngModel)]="form.name" placeholder="教材名称，如 人教版七年级英语上册" />
+          <div class="row">
+            <input [(ngModel)]="form.publisher" placeholder="出版社（自动带出）" />
+          </div>
+          <select [(ngModel)]="form.grade">
+            <option *ngFor="let g of gradeOptions">{{ g }}</option>
+          </select>
+          <button class="btn primary" (click)="createTextbook()" [disabled]="creating || !form.name.trim()">
+            {{ creating ? '初始化目录中…' : '创建并初始化目录' }}
+          </button>
+          <p class="hint">从下拉选择常用教材，出版社/年级自动带出，避免手工输入歧义</p>
+        </div>
+      </details>
+
+      <!-- 折叠：功能与工具 -->
+      <details class="fold-panel">
+        <summary>⚙️ 功能与工具</summary>
+        <div class="side-links">
+          <a class="ability-link" routerLink="/ability">📊 能力画像</a>
+          <a class="ability-link" routerLink="/pronunciation">🗣️ 发音评测</a>
+          <a class="ability-link" routerLink="/config">⚙️ 模型配置</a>
+          <button class="ability-link btn-link" (click)="fixImages()" title="全库：把历史课文外链图片下载到本地">🗜 修复外链图片</button>
+          <button class="ability-link btn-link" (click)="backfillAudio()" title="全库：补合成历史课文缺失音频">🎵 补合成音频</button>
+        </div>
+      </details>
+
       <p *ngIf="error" class="err">{{ error }}</p>
     </div>
   </aside>
