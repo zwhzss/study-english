@@ -54,3 +54,8 @@ label input:focus, label select:focus { outline: none; border-color: #1a73e8; }
 .updated { font-size: 12px; color: #9aa4b2; }
 
 @media (max-width: 640px) { .topbar { flex-wrap: wrap; } }
+
+/* TTS 生效状态 */
+.tts-status { display: flex; align-items: center; gap: 8px; background: #f0f7ff; border: 1px solid #d6e4ff; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #1a3a5c; margin-bottom: 12px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #e37400; flex-shrink: 0; }
+.status-dot.ok { background: #188038; }

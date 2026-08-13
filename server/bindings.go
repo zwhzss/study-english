@@ -10,6 +10,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"study-english/server/internal/ai"
 	"study-english/server/internal/model"
 	"study-english/server/internal/service"
 )
@@ -228,6 +229,47 @@ func (a *App) ListPronunciations() ([]model.PronunciationRecord, error) {
 
 func (a *App) DeletePronunciation(id uint) error {
 	return a.pronSvc.Delete(id)
+}
+
+// TTSStatusData 当前 TTS 生效通道状态
+type TTSStatusData struct {
+	Provider      string `json:"provider"` // edge / openai / mock
+	Model         string `json:"model"`
+	EdgeAvailable bool   `json:"edge_available"` // 本机 edge-tts 是否可用
+	VoiceLabel    string `json:"voice_label"`    // 中文说明
+}
+
+// TTSStatus 返回当前 TTS 通道状态（配置页显示）
+func (a *App) TTSStatus() (*TTSStatusData, error) {
+	cfg, _, err := a.cfgSvc.Get()
+	if err != nil {
+		return nil, err
+	}
+	edgeAvail := ai.EdgeTTSAvailable()
+	st := &TTSStatusData{
+		Provider:      cfg.TTS.Provider,
+		Model:         cfg.TTS.Model,
+		EdgeAvailable: edgeAvail,
+	}
+	switch cfg.TTS.Provider {
+	case "edge":
+		label := "Edge TTS 本地（23 角色音色，免费）"
+		if !edgeAvail {
+			label += " ⚠️ edge-tts 未安装，将自动安装"
+		}
+		st.VoiceLabel = label
+	case "mock":
+		st.VoiceLabel = "Mock（浏览器朗读兜底）"
+	case "openai":
+		if cfg.TTS.APIKey != "" {
+			st.VoiceLabel = "在线 TTS（" + cfg.TTS.Model + "）"
+		} else {
+			st.VoiceLabel = "未填 API Key → 浏览器朗读兜底"
+		}
+	default:
+		st.VoiceLabel = "未配置 → 浏览器朗读兜底"
+	}
+	return st, nil
 }
 
 // ========== 媒体文件 ==========

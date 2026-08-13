@@ -259,6 +259,12 @@ export class ApiService {
     if (this.inWails()) return this.wails<void>('SaveAIConfig', cfg).pipe(map(() => ({ data: { ok: true, message: '已保存' } })));
     return this.http.post<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/config/ai`, cfg);
   }
+  /** 当前 TTS 生效通道状态 */
+  ttsStatus(): Observable<ApiResponse<{ provider: string; model: string; edge_available: boolean; voice_label: string }>> {
+    if (this.inWails()) return this.wails<{ provider: string; model: string; edge_available: boolean; voice_label: string }>('TTSStatus').pipe(map((d) => ({ data: d })));
+    return this.http.get<ApiResponse<{ provider: string; model: string; edge_available: boolean; voice_label: string }>>(`${this.base}/tts/status`);
+  }
+
   /** 测试连接（Wails 返回 (message, err)；HTTP 返回 {ok,type,message}） */
   testAIConfig(type: string, config: ProviderSetting): Observable<{ ok: boolean; type: string; message: string }> {
     if (this.inWails()) {

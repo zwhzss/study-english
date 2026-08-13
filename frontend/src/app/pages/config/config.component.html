@@ -57,6 +57,10 @@
     <!-- 语音 -->
     <div class="card">
       <h2>🔊 语音合成（TTS）<span class="tag">课文朗读 · 对话发音</span></h2>
+      <div class="tts-status" *ngIf="ttsStatusInfo">
+        <span class="status-dot" [class.ok]="ttsStatusInfo.provider === 'edge' || (ttsStatusInfo.provider === 'openai' && ttsStatusInfo.model)"></span>
+        <b>当前生效：</b>{{ ttsStatusInfo.voice_label }}
+      </div>
       <div class="preset-row">
         <label>常用平台（一键填充）
           <select (change)="fillPreset('tts', $any($event.target).value)">

@@ -58,10 +58,20 @@ export class ConfigComponent implements OnInit {
   saving: Record<string, boolean> = { llm: false, tts: false, image: false };
   testResult: Record<string, { ok: boolean; msg: string }> = {};
   savedMsg: Record<string, string> = { llm: '', tts: '', image: '' };
+  ttsStatusInfo: { provider: string; model: string; edge_available: boolean; voice_label: string } | null = null;
 
   constructor(private api: ApiService) {}
 
+  /** 加载当前 TTS 生效通道状态 */
+  loadTTSStatus(): void {
+    this.api.ttsStatus().subscribe({
+      next: (res) => { this.ttsStatusInfo = res.data; },
+      error: () => {},
+    });
+  }
+
   ngOnInit(): void {
+    this.loadTTSStatus();
     this.api.getAIConfig().subscribe({
       next: (res) => {
         this.cfg = res.data;
