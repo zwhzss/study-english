@@ -159,66 +159,33 @@ export class DialogueComponent implements OnInit, OnDestroy {
   }
 
   /** fetch + ReadableStream 解析 SSE（event: delta → done） */
+  /** 流式聊天：双通道（Wails 事件 / HTTP SSE），逐字填充 AI 气泡 */
   private async streamChat(sessionId: number, text: string, aiBubble: ChatMsg, signal: AbortSignal): Promise<void> {
-    const resp = await fetch(`${this.api.getBase()}/dialogue/sessions/${sessionId}/messages/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-      signal,
+    await new Promise<void>((resolve, reject) => {
+      const sub = this.api.streamDialogue(sessionId, text, (ai) => {
+        // 完成：填充 AI 消息字段 + 自动朗读
+        aiBubble.content = ai.content;
+        aiBubble.speaker = ai.speaker;
+        aiBubble.speaker_name = ai.speaker_name;
+        aiBubble.audio_url = ai.audio_url;
+        this.audio.speak(ai.content, ai.audio_url);
+        this.scrollToBottom();
+      }).subscribe({
+        next: (delta) => {
+          aiBubble.content += delta;
+          this.scrollToBottom();
+        },
+        complete: () => {
+          aiBubble.streaming = false;
+          resolve();
+        },
+        error: (e) => {
+          aiBubble.streaming = false;
+          reject(e);
+        },
+      });
+      signal.addEventListener('abort', () => sub.unsubscribe());
     });
-    if (!resp.ok || !resp.body) {
-      throw new Error(`HTTP ${resp.status}`);
-    }
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      // SSE 事件以空行分隔
-      let idx: number;
-      while ((idx = buf.indexOf('\n\n')) >= 0) {
-        const raw = buf.slice(0, idx);
-        buf = buf.slice(idx + 2);
-        this.handleSSEEvent(raw, aiBubble);
-        if (this.sseErrored) return; // error 事件后停止解析
-      }
-    }
-  }
-
-  private handleSSEEvent(raw: string, aiBubble: ChatMsg): void {
-    let event = 'message';
-    let data = '';
-    for (const line of raw.split('\n')) {
-      if (line.startsWith('event:')) event = line.slice(6).trim();
-      else if (line.startsWith('data:')) data += line.slice(5).trim();
-    }
-    if (!data) return;
-    let payload: any;
-    try {
-      payload = JSON.parse(data);
-    } catch {
-      return;
-    }
-    if (event === 'delta') {
-      aiBubble.content += payload.delta;
-      this.scrollToBottom();
-    } else if (event === 'done') {
-      const a = payload.ai;
-      aiBubble.content = a.content;
-      aiBubble.speaker = a.speaker;
-      aiBubble.speaker_name = a.speaker_name;
-      aiBubble.audio_url = a.audio_url;
-      aiBubble.streaming = false;
-      // AI 回复自动朗读
-      this.audio.speak(a.content, a.audio_url);
-      this.scrollToBottom();
-    } else if (event === 'error') {
-      aiBubble.streaming = false;
-      this.error = payload.message || '发送失败';
-      this.sseErrored = true;
-    }
   }
 
   /** 麦克风：录音 → 后端 ASR 识别 → 自动发送（原声不上传 AI，仅本地转文字） */

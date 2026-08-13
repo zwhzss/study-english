@@ -164,7 +164,7 @@ export class ApiService {
   }
 
   /** 流式发送（SSE 或 Wails 事件）——返回 Observable 直接订阅消息块 */
-  streamDialogue(sessionId: number, text: string): Observable<string> {
+  streamDialogue(sessionId: number, text: string, onComplete?: (ai: DialogueMessage) => void): Observable<string> {
     if (this.inWails()) {
       // Wails 事件通道：订阅 ai:delta / ai:done
       return new Observable<string>((sub) => {
@@ -177,7 +177,10 @@ export class ApiService {
         const onDone = (_: any, data: any) => {
           if (data?.session_id !== sessionId) return;
           if (data.error) sub.error(new Error(data.error));
-          else sub.complete();
+          else {
+            if (data.message && onComplete) onComplete(data.message);
+            sub.complete();
+          }
         };
         rt.EventsOn('ai:delta', onDelta);
         rt.EventsOn('ai:done', onDone);
@@ -213,6 +216,7 @@ export class ApiService {
               const obj = JSON.parse(payload);
               if (obj.error) { sub.error(new Error(obj.error)); return; }
               if (obj.delta) sub.next(obj.delta);
+              if (obj.event === 'done' && obj.ai && onComplete) onComplete(obj.ai);
             } catch { /* 忽略脏数据 */ }
           }
           pump();
