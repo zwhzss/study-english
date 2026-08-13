@@ -113,15 +113,19 @@ func (t *EdgeTTS) Synthesize(text, role string) (string, error) {
 }
 
 // edgeTTSCommand 构造 edge-tts 命令：优先 edge-tts 可执行，否则 python -m edge_tts
+// Windows 下隐藏子进程控制台窗口（否则每次合成弹出黑窗）
 func edgeTTSCommand(ctx context.Context, voice, text, path string) *exec.Cmd {
 	args := []string{"--voice", voice, "--text", text, "--write-media", path}
+	var cmd *exec.Cmd
 	if _, err := exec.LookPath("edge-tts"); err == nil {
-		return exec.CommandContext(ctx, "edge-tts", args...)
+		cmd = exec.CommandContext(ctx, "edge-tts", args...)
+	} else if _, err := exec.LookPath("python"); err == nil {
+		cmd = exec.CommandContext(ctx, "python", append([]string{"-m", "edge_tts"}, args...)...)
+	} else {
+		cmd = exec.CommandContext(ctx, "python3", append([]string{"-m", "edge_tts"}, args...)...)
 	}
-	if _, err := exec.LookPath("python"); err == nil {
-		return exec.CommandContext(ctx, "python", append([]string{"-m", "edge_tts"}, args...)...)
-	}
-	return exec.CommandContext(ctx, "python3", append([]string{"-m", "edge_tts"}, args...)...)
+	hideWindow(cmd)
+	return cmd
 }
 
 // EdgeTTSAvailable 检查本机 edge-tts 是否可用
