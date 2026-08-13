@@ -418,7 +418,13 @@ export class TextbooksComponent implements OnInit, OnDestroy {
     this.api.migrateImages().subscribe({
       next: (res) => {
         const d = res.data;
-        this.notice = `✅ 修复完成：${d.downloaded} 张图片已下载到本地（涉及 ${d.lessons} 个课时）` + (d.failed ? `，${d.failed} 张下载失败（保留原外链）` : '');
+        let msg = `✅ 修复完成：${d.downloaded} 张已下载（${d.lessons} 个课时）` + (d.failed ? `，${d.failed} 张失败` : '');
+        if (d.failed_details?.length) {
+          const names = [...new Set(d.failed_details.map((x) => x.lesson_title))].join('、');
+          msg += `\n\n失败图片所在课时：${names}\n（图片 URL 已过期，请对相应课时点「🔄 重新生成」恢复）`;
+        }
+        alert(msg);
+        this.notice = `✅ 修复完成：${d.downloaded} 张已下载，${d.failed} 张失败`;
         if (this.selectedTextbook) this.loadCatalog(this.selectedTextbook.id); // 刷新目录
       },
       error: (e) => {

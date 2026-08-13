@@ -99,8 +99,8 @@ export class ApiService {
   }
 
   /** 外链图片批量下载到本地（历史课文图片永久化） */
-  migrateImages(): Observable<ApiResponse<{ lessons: number; downloaded: number; failed: number }>> {
-    if (this.inWails()) return this.wails<{ lessons: number; downloaded: number; failed: number }>('MigrateImages').pipe(map((d) => ({ data: d })));
+  migrateImages(): Observable<ApiResponse<{ lessons: number; downloaded: number; failed: number; failed_details?: { lesson_id: number; lesson_title: string; url: string }[] }>> {
+    if (this.inWails()) return this.wails<{ lessons: number; downloaded: number; failed: number; failed_details?: { lesson_id: number; lesson_title: string; url: string }[] }>('MigrateImages').pipe(map((d) => ({ data: d })));
     return this.http.post<ApiResponse<{ lessons: number; downloaded: number; failed: number }>>(`${this.base}/images/migrate`, {});
   }
 

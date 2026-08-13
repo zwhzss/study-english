@@ -1078,9 +1078,17 @@ func (s *TextbookService) BackfillMissingAudio() (*AudioBackfillResult, error) {
 }
 
 type ImageMigrateResult struct {
-	Lessons    int `json:"lessons"`    // 修改的课时数
-	Downloaded int `json:"downloaded"` // 成功下载的图片数
-	Failed     int `json:"failed"`     // 下载失败的图片数（保留原外链）
+	Lessons       int               `json:"lessons"`                  // 修改的课时数
+	Downloaded    int               `json:"downloaded"`               // 成功下载的图片数
+	Failed        int               `json:"failed"`                   // 下载失败的图片数（保留原外链）
+	FailedDetails []ImageFailDetail `json:"failed_details,omitempty"` // 失败明细（定位需重新生成的课时）
+}
+
+// ImageFailDetail 单张图片下载失败明细
+type ImageFailDetail struct {
+	LessonID    uint   `json:"lesson_id"`
+	LessonTitle string `json:"lesson_title"`
+	URL         string `json:"url"`
 }
 
 // MigrateExternalImages 把历史课文里的外链图片（硅基流动 s3 临时 URL / unsplash）批量下载到本地
@@ -1109,6 +1117,9 @@ func (s *TextbookService) MigrateExternalImages() (*ImageMigrateResult, error) {
 				result.Downloaded++
 			} else {
 				result.Failed++
+				result.FailedDetails = append(result.FailedDetails, ImageFailDetail{
+					LessonID: c.CatalogItemID, LessonTitle: c.Title, URL: img,
+				})
 			}
 		}
 		if changed {
