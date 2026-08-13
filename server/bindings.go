@@ -148,9 +148,14 @@ func (a *App) SendDialogueMessage(sessionID uint, text string) (*DialogueReply, 
 	return &DialogueReply{User: userMsg, AI: aiMsg}, nil
 }
 
-// StartStreamDialogue 流式发送：逐字通过 Wails 事件 ai:delta 推送，结束推送 ai:done
+// StartStreamDialogue 流式发送：逐字通过 Wails 事件 ai:delta 推送，结束推送 ai:done，
+// TTS 音频合成完成后推送 ai:audio（前端立即播放，不等音频）
 func (a *App) StartStreamDialogue(sessionID uint, text string) error {
 	a.logf("对话流式开始 session=%d text=%q", sessionID, text)
+	// 注册 TTS 完成回调（本次会话）：合成完成 → 推送 ai:audio 事件
+	a.dgSvc.SetAudioCallback(func(sid uint, url string) {
+		runtime.EventsEmit(a.ctx, "ai:audio", map[string]any{"session_id": sid, "audio_url": url})
+	})
 	go func() {
 		t0 := time.Now()
 		_, aiMsg, err := a.dgSvc.StreamReply(context.Background(), sessionID, text, func(delta string) error {

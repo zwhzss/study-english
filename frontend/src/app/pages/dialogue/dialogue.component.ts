@@ -163,13 +163,17 @@ export class DialogueComponent implements OnInit, OnDestroy {
   private async streamChat(sessionId: number, text: string, aiBubble: ChatMsg, signal: AbortSignal): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const sub = this.api.streamDialogue(sessionId, text, (ai) => {
-        // 完成：填充 AI 消息字段 + 自动朗读
+        // 完成：填充 AI 消息字段；朗读改由 audio_url 决定（有则 TTS，无则浏览器兜底）
         aiBubble.content = ai.content;
         aiBubble.speaker = ai.speaker;
         aiBubble.speaker_name = ai.speaker_name;
         aiBubble.audio_url = ai.audio_url;
         this.audio.speak(ai.content, ai.audio_url);
         this.scrollToBottom();
+      }, (audioUrl) => {
+        // ai:audio：TTS 合成完成，播放真实角色音色（覆盖浏览器朗读）
+        aiBubble.audio_url = audioUrl;
+        if (aiBubble.content) this.audio.speak(aiBubble.content, audioUrl);
       }).pipe(timeout(30000)).subscribe({
         next: (delta) => {
           aiBubble.content += delta;

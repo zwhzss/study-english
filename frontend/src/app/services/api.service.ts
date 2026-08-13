@@ -164,7 +164,7 @@ export class ApiService {
   }
 
   /** 流式发送（SSE 或 Wails 事件）——返回 Observable 直接订阅消息块 */
-  streamDialogue(sessionId: number, text: string, onComplete?: (ai: DialogueMessage) => void): Observable<string> {
+  streamDialogue(sessionId: number, text: string, onComplete?: (ai: DialogueMessage) => void, onAudioCb?: (url: string) => void): Observable<string> {
     if (this.inWails()) {
       // Wails 事件通道：订阅 ai:delta / ai:done（事件回调在 Angular zone 外，必须包 ngZone.run 触发变更检测）
       return new Observable<string>((sub) => {
@@ -185,14 +185,21 @@ export class ApiService {
             }
           });
         };
+        const onAudio = (_: any, data: any) => {
+          if (data?.session_id === sessionId && data.audio_url && onAudioCb) {
+            this.ngZone.run(() => onAudioCb(data.audio_url));
+          }
+        };
         rt.EventsOn('ai:delta', onDelta);
         rt.EventsOn('ai:done', onDone);
+        rt.EventsOn('ai:audio', onAudio);
         this.wails<void>('StartStreamDialogue', sessionId, text).subscribe({
           error: (e) => { sub.error(e); },
         });
         return () => {
           rt.EventsOff('ai:delta');
           rt.EventsOff('ai:done');
+          rt.EventsOff('ai:audio');
         };
       });
     }

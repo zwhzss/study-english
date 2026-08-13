@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 
 	"gorm.io/gorm"
 
@@ -16,9 +17,10 @@ import (
 
 // DialogueService AI 实景对话：学生扮演场景中的一角色，AI 扮演其余角色
 type DialogueService struct {
-	db  *gorm.DB
-	reg *ai.Registry
-	log *slog.Logger
+	db    *gorm.DB
+	reg   *ai.Registry
+	log   *slog.Logger
+	audio atomic.Value // func(sessionID uint, url string) —— TTS 异步合成完成回调
 }
 
 func NewDialogueService(db *gorm.DB, reg *ai.Registry) *DialogueService {
@@ -253,14 +255,22 @@ func (s *DialogueService) saveAIMessage(sessionID uint, reply string, aiRole mod
 		return nil, err
 	}
 	// TTS 异步合成并回填 audio_url：不阻塞 ai:done（LLM 完成即返回，前端立即显示/朗读兜底，
-	// 音频合成好后历史消息自动带上，可随时播放）
+	// 音频合成好后通过回调（ai:audio 事件）通知前端播放，历史消息自动带上 audio_url）
 	go func() {
 		url, err := s.reg.TTS().Synthesize(reply, aiRole.Role)
 		if err == nil && url != "" {
 			s.db.Model(aiMsg).Update("audio_url", url)
+			if cb, ok := s.audio.Load().(func(uint, string)); ok && cb != nil {
+				cb(sessionID, url)
+			}
 		}
 	}()
 	return aiMsg, nil
+}
+
+// SetAudioCallback 注册 TTS 异步合成完成回调（sessionID, audioURL），Wails 绑定层推送 ai:audio 事件
+func (s *DialogueService) SetAudioCallback(cb func(sessionID uint, url string)) {
+	s.audio.Store(cb)
 }
 
 // joinUserMessages 将历史 user/assistant 消息拼接为单条用户输入（简化流式前的实现）
