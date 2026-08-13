@@ -182,15 +182,39 @@ func (p *PracticeItem) UnmarshalJSON(data []byte) error {
 }
 
 // 内置角色音色映射（真实 TTS 接入后按角色换音色；浏览器回退用 SpeechSynthesis）
+// DefaultRoleVoices 角色 → 中文音色标签（课文气泡显示，与 edge-tts 角色音色映射对应）
 var DefaultRoleVoices = map[string]string{
-	"waiter":   "男声-成熟",
-	"customer": "女声-年轻",
-	"teacher":  "女声-温柔",
-	"student":  "童声",
-	"clerk":    "男声-稳重",
-	"driver":   "男声-中年",
-	"doctor":   "女声-专业",
-	"friend":   "女声-活泼",
+	"boy":            "男童音色",
+	"girl":           "女童音色",
+	"student":        "童声音色",
+	"teacher":        "年轻女教师音色",
+	"male_teacher":   "年轻男教师音色",
+	"female_teacher": "年轻女教师音色",
+	"teacher_male":   "年轻男教师音色",
+	"teacher_female": "中年女教师音色",
+	"teacher_middle": "中年男教师音色",
+	"headmaster":     "中年男教师音色",
+	"grandpa":        "老年男声音色",
+	"grandma":        "老年女声音色",
+	"brother":        "青年男声音色",
+	"sister":         "青年女声音色",
+	"uncle":          "中年男声音色",
+	"aunt":           "中年女声音色",
+	"mother":         "妈妈音色",
+	"father":         "爸爸音色",
+	"mom":            "妈妈音色",
+	"dad":            "爸爸音色",
+	"waiter":         "男声-成熟",
+	"customer":       "女声-年轻",
+	"clerk":          "男声-稳重",
+	"driver":         "男声-中年",
+	"farmer":         "农民浑厚男声",
+	"worker":         "工人男声",
+	"doctor":         "女声-专业",
+	"nurse":          "护士女声",
+	"police":         "警察男声",
+	"friend":         "女声-活泼",
+	"vocab":          "标准女声",
 }
 
 // AIConfig 模型配置（数据库持久化，单行存储整份 JSON）
