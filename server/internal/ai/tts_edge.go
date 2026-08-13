@@ -129,8 +129,52 @@ func EdgeTTSAvailable() bool {
 	if _, err := exec.LookPath("edge-tts"); err == nil {
 		return true
 	}
-	if _, err := exec.LookPath("python"); err == nil {
-		return true // python -m edge_tts 可行（依赖包存在与否在合成时判断）
+	for _, py := range pythonCandidates() {
+		if err := exec.Command(py, "-c", "import edge_tts").Run(); err == nil {
+			return true
+		}
 	}
 	return false
+}
+
+// EnsureEdgeTTS 启动时自动检查并安装 edge-tts（幂等，不阻塞）：已可用直接返回；
+// 否则尝试 pip install（异步调用方自行 goroutine）。logf 可选（写应用日志）
+func EnsureEdgeTTS(logf func(format string, args ...any)) {
+	if EdgeTTSAvailable() {
+		if logf != nil {
+			logf("edge-tts 已就绪")
+		}
+		return
+	}
+	if logf != nil {
+		logf("edge-tts 未安装，尝试自动安装（pip install edge-tts）…")
+	}
+	for _, py := range pythonCandidates() {
+		ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
+		out, err := exec.CommandContext(ctx, py, "-m", "pip", "install", "-q", "edge-tts").CombinedOutput()
+		cancel()
+		if err == nil && EdgeTTSAvailable() {
+			if logf != nil {
+				logf("edge-tts 自动安装成功（%s）", py)
+			}
+			return
+		}
+		if logf != nil {
+			logf("edge-tts 安装失败（%s）: %s", py, strings.TrimSpace(string(out)))
+		}
+	}
+}
+
+// pythonCandidates Windows/Unix 常见 Python 命令
+func pythonCandidates() []string {
+	var out []string
+	for _, c := range []string{"python", "python3", "py"} {
+		if _, err := exec.LookPath(c); err == nil {
+			out = append(out, c)
+		}
+	}
+	if len(out) == 0 {
+		out = []string{"python"}
+	}
+	return out
 }

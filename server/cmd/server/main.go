@@ -32,6 +32,7 @@ func main() {
 	service.LoadConfigIntoRegistry(db, reg)
 
 	svc := service.NewTextbookService(db, reg, cfg.DataDir)
+	go ai.EnsureEdgeTTS(nil) // 异步确保 edge-tts 可用（已安装秒返回）
 	dsvc := service.NewDialogueService(db, reg)
 	abSvc := service.NewAbilityService(db)
 	cfgSvc := service.NewConfigService(db, reg)
