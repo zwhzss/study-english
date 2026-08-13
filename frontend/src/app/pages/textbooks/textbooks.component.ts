@@ -53,6 +53,8 @@ export class TextbooksComponent implements OnInit, OnDestroy {
   /** 全文朗读状态（readingIdx=当前播放句下标，-1 未播放） */
   readingAll = false;
   readingIdx = -1;
+  /** 已自动切到"真实课文"的课时 id（防重复切换，避免 AI 空态与 imported 死循环） */
+  private autoImportedLessonId: number | null = null;
 
   // 角色头像 emoji
   private roleIcons: Record<string, string> = {
@@ -236,6 +238,7 @@ export class TextbooksComponent implements OnInit, OnDestroy {
     this.error = '';
     this.notice = '';
     this.cancelPolling(); // 取消当前轮询订阅（不删除进行中任务记录）
+    this.autoImportedLessonId = null; // 重置自动切换标记
     // 有内容（AI 或导入）→ 直接加载，忽略可能残留的 polling 记录（内容已入库）
     if (lesson.has_content) {
       this.loadContent(lesson.id, 'ai');
@@ -366,7 +369,17 @@ export class TextbooksComponent implements OnInit, OnDestroy {
         this.loadingContent = false;
         // 未生成内容不报错（显示对应空态；AI 与导入课文独立，用户手动点 Tab 切换）
         if (kind === 'imported') this.importedContent = null;
-        else this.content = null;
+        else {
+          this.content = null;
+          // AI 内容为空但课时有内容（导入的真实课文）→ 自动切「真实课文」一次（防循环）
+          const id = this.selectedLesson?.id;
+          if (this.selectedLesson?.has_content && id && this.autoImportedLessonId !== id) {
+            this.autoImportedLessonId = id;
+            this.activeTab = 'imported';
+            this.loadContent(id, 'imported');
+            return;
+          }
+        }
         this.error = '';
       },
     });
