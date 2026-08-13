@@ -74,6 +74,26 @@ func (a *App) startup(ctx context.Context) {
 	a.pronSvc = service.NewPronunciationService(db, reg, cfg.DataDir)
 	// 初始化种子教材（仅首次）
 	service.SeedTextbooks(db)
+	note("启动初始化完成")
+	// 启动自检：自动验证核心链路（LLM 对话 / TTS 合成 / 数据库），结果写 app.log
+	a.runSelfCheck(note)
+}
+
+// runSelfCheck 启动自检：真实调用 LLM（deepseek）+ TTS（edge）+ DB 读，排查"桌面版功能异常"
+func (a *App) runSelfCheck(note func(f string, args ...any)) {
+	go func() {
+		ctx := context.Background()
+		t0 := time.Now()
+		reply, err := a.reg.LLM().Chat(ctx, "你是测试助手，只回复 OK 两个字。", "回复 OK 两个字")
+		note("自检 LLM: err=%v 耗时%.1fs 回复=%q", err, time.Since(t0).Seconds(), reply)
+		t0 = time.Now()
+		url, err := a.reg.TTS().Synthesize("Hello, this is a smoke test.", "teacher")
+		note("自检 TTS: err=%v 耗时%.1fs url=%s", err, time.Since(t0).Seconds(), url)
+		var cnt int64
+		a.tbSvc.CountTextbooks(&cnt)
+		note("自检 DB: 教材 %d 本", cnt)
+		note("自检完成")
+	}()
 }
 
 func (a *App) shutdown(ctx context.Context) {}

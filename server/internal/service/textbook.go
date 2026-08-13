@@ -494,6 +494,11 @@ func contains(s, sub string) bool {
 }
 
 // ListTextbooks 教材列表
+// CountTextbooks 教材总数（启动自检用）
+func (s *TextbookService) CountTextbooks(cnt *int64) error {
+	return s.db.Model(&model.Textbook{}).Count(cnt).Error
+}
+
 func (s *TextbookService) ListTextbooks() ([]model.Textbook, error) {
 	var tbs []model.Textbook
 	// 按 sort_order 排序（sort_order=0 的历史教材视为创建顺序）
