@@ -367,3 +367,7 @@
 
 /* 全文朗读当前句高亮 */
 .bubble.reading { outline: 3px solid #1a73e8; transform: scale(1.02); }
+
+/* 侧栏动作按钮（全库级工具） */
+.ability-link.btn-link { background: transparent; border: none; cursor: pointer; font-size: 13px; text-align: left; width: 100%; font-family: inherit; }
+.ability-link.btn-link:hover { color: #1a73e8; }
