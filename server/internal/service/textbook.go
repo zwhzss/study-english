@@ -588,6 +588,10 @@ func (s *TextbookService) GetCatalogTree(textbookID uint) ([]CatalogNode, error)
 		hasContent := false
 		var cnt int64
 		s.db.Model(&model.AIContent{}).Where("catalog_item_id = ?", it.ID).Count(&cnt)
+		if cnt == 0 {
+			// AI 内容无，再看导入内容（真实课文导入也算有内容）
+			s.db.Model(&model.ImportedContent{}).Where("catalog_item_id = ?", it.ID).Count(&cnt)
+		}
 		hasContent = cnt > 0
 		nodes[idx].Lessons = append(nodes[idx].Lessons, CatalogLesson{
 			ID: it.ID, Lesson: it.Lesson, Title: it.Title, Scene: it.Scene,

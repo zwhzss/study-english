@@ -289,7 +289,15 @@ export class TextbooksComponent implements OnInit {
         this.loadingContent = false;
         // 未生成内容不报错（显示对应空态）
         if (kind === 'imported') this.importedContent = null;
-        else this.content = null;
+        else {
+          this.content = null;
+          // AI 内容为空但课时有内容（导入的真实课文）→ 自动切到「真实课文」Tab
+          if (this.selectedLesson?.has_content) {
+            this.activeTab = 'imported';
+            this.loadContent(this.selectedLesson.id, 'imported');
+            return;
+          }
+        }
         this.error = '';
       },
     });
