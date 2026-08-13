@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -1049,18 +1050,35 @@ func (s *TextbookService) MigrateExternalImages() (*ImageMigrateResult, error) {
 
 // synthesizeAndPersistAudio 为对话/词汇合成 TTS 音频并写入 payload（audio_url 入库持久化）
 func (s *TextbookService) synthesizeAndPersistAudio(p *lessonPayload) {
+	// 并发合成：对话每句 + 词汇例句并行调用（EdgeTTS 内部信号量限流最多 2 进程），
+	// 7 轮对话 + 5 词汇从 ~24s 串行缩短到 ~3s
+	type job struct {
+		idx    int
+		text   string
+		role   string
+		target func(i int, url string)
+	}
+	var jobs []job
 	for i := range p.Dialogue {
-		url, err := s.reg.TTS().Synthesize(p.Dialogue[i].Text, p.Dialogue[i].Role)
-		if err == nil {
-			p.Dialogue[i].AudioURL = url
-		}
+		idx := i
+		jobs = append(jobs, job{idx: idx, text: p.Dialogue[i].Text, role: p.Dialogue[i].Role, target: func(i int, url string) { p.Dialogue[i].AudioURL = url }})
 	}
 	for i := range p.KeyVocab {
-		url, err := s.reg.TTS().Synthesize(p.KeyVocab[i].Example, "vocab")
-		if err == nil {
-			p.KeyVocab[i].AudioURL = url
-		}
+		idx := i
+		jobs = append(jobs, job{idx: idx, text: p.KeyVocab[i].Example, role: "vocab", target: func(i int, url string) { p.KeyVocab[i].AudioURL = url }})
 	}
+	var wg sync.WaitGroup
+	for _, j := range jobs {
+		wg.Add(1)
+		go func(j job) {
+			defer wg.Done()
+			url, err := s.reg.TTS().Synthesize(j.text, j.role)
+			if err == nil {
+				j.target(j.idx, url)
+			}
+		}(j)
+	}
+	wg.Wait()
 }
 
 // assembleContent 将 JSON 字段反序列化为前端结构并附加角色音色
