@@ -84,6 +84,10 @@ assert('发送文本正确', last?.text === 'Hello!', last?.text);
 
 // 5. 模拟打字机 → 文字逐字显示（绑定返回后前端模拟输出）
 await page.waitForTimeout(2500);
+// 6a. 内容不重复（修复：onComplete 延后到打字机结束）
+const text2 = await page.evaluate(() => document.body.innerText);
+const m = text2.match(/Hi there!/g);
+assert('回复内容不重复（Hi there! 只出现 1 次）', m ? m.length === 1 : false, '次数=' + (m ? m.length : 0));
 const text = await page.evaluate(() => document.body.innerText);
 assert('ai:delta 文字显示（Hi there!）', text.includes('Hi there!'), text.slice(0, 150));
 

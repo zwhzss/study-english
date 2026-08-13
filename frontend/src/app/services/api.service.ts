@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
-import { Observable, concatMap, from, map, mergeMap, of, throwError, timer } from 'rxjs';
+import { Observable, concatMap, from, map, mergeMap, of, tap, throwError, timer } from 'rxjs';
 import { ApiResponse, AbilityProfile, AIConfig, CatalogNode, DialogueMessage, DialogueSession, ImportedContent, LessonContent, PronunciationRecord, ProviderSetting, Textbook, TextbookMeta } from '../models/models';
 
 /**
@@ -170,7 +170,7 @@ export class ApiService {
       // 前端模拟打字机逐字输出；TTS 音频 2 秒后轮询历史消息获取（异步合成）
       return this.wails<{ user: DialogueMessage; ai: DialogueMessage }>('SendDialogueMessage', sessionId, text).pipe(
         mergeMap(({ ai }) => {
-          onComplete?.(ai);
+          // 打字机先逐块输出（content 累加），结束后再 onComplete——避免 content 被设置全文后又累加导致重复
           // 2 秒后拉历史拿合成好的 TTS 音频（edge-tts 异步合成约 1-2s）
           setTimeout(() => {
             this.wails<DialogueMessage[]>('ListDialogueMessages', sessionId).subscribe({
@@ -181,12 +181,16 @@ export class ApiService {
               error: () => {},
             });
           }, 2000);
-          // 模拟打字机：每 30ms 输出 2 字符
+          // 模拟打字机：每 30ms 输出 2 字符，全部输出后调用 onComplete（设最终 content/audio_url）
           const content = ai.content || '';
           const chunks: string[] = [];
           for (let i = 0; i < content.length; i += 2) chunks.push(content.slice(i, i + 2));
           if (!chunks.length) chunks.push('');
-          return from(chunks).pipe(concatMap((c) => timer(30).pipe(map(() => c))));
+          return from(chunks).pipe(
+            concatMap((c) => timer(30).pipe(map(() => c))),
+            // 最后一个 chunk 输出后触发 onComplete（追加一个完成信号）
+            mergeMap((c, idx) => (idx === chunks.length - 1 ? of(c).pipe(tap(() => onComplete?.(ai))) : of(c)))
+          );
         })
       );
     }
