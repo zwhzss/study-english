@@ -795,11 +795,13 @@ const contentSystemPrompt = `你是一位专业的少儿英语教材编写专家
 7. 配图：2 张真实场景相关图片 URL（使用 https://images.unsplash.com 的稳定图片地址），并为每张图提供 1 条英文绘图描述 image_prompts（描述场景主体、环境、光线、风格，适合 AI 绘图，如 "a cozy restaurant interior with a waiter taking orders from a customer, warm lighting, realistic illustration style"）。images 与 image_prompts 一一对应。
 8. 示意图（可选但推荐）：生成 1-2 张简单 SVG 示意图 svg_images（如场景布局图、单词分类图、对话流程箭头图），每张含 title 和 svg 字段。SVG 要求：viewBox 或宽高明确（建议 400x300 内）、用纯矢量元素（rect/circle/path/text/line）、颜色简洁、可内嵌英文标注；**禁止** script、foreignObject、on* 事件属性、外部链接（href 只能为普通链接）等危险元素。
 9. 严格输出合法 JSON，不要输出任何其他文字，不要用 markdown 代码块包裹。字段类型必须严格遵守，尤其注意：
+   - **unit、title、scene 必须是字符串**（如 "unit": "Unit 1"），**绝不能是数字**（禁止 "unit": 1，必须 "unit": "Unit 1"）；
+   - **role 必须从角色库取值**（boy/girl/student/teacher/male_teacher/grandpa/grandma/brother/sister/uncle/aunt/mother/father/waiter/customer/clerk/driver/farmer/worker/doctor/nurse/police/friend），禁止自创名字（如 alex/mia）或编号（如 student1）；
    - hints 必须是字符串数组（如 "hints": ["提示1", "提示2"]），绝不能输出单个字符串；
    - dialogue、key_vocab、grammar_points、practice、images、image_prompts、svg_images 都必须是 JSON 数组；
    - 字符串内的双引号必须用 \" 转义；禁止未转义的换行符、制表符、控制字符；禁止尾逗号和注释；
-   - 输出前请自行检查 JSON 语法完全合法。
-   JSON 字段：unit, title, scene, dialogue(role/role_name/text/image), key_vocab(word/phonetic/meaning/example), grammar_points(point/explanation/example), practice(type/prompt/example/hints数组), images(string数组), image_prompts(string数组), svg_images(title/svg数组)。`
+   - 输出前请自行检查 JSON 语法完全合法、字段类型正确。
+   JSON 字段：unit(字符串), title(字符串), scene(字符串), dialogue(role/role_name/text/image), key_vocab(word/phonetic/meaning/example), grammar_points(point/explanation/example), practice(type/prompt/example/hints数组), images(string数组), image_prompts(string数组), svg_images(title/svg数组)。`
 
 // PullLessonContent 按 单元（目录项）从大模型拉取教材内容并入库
 // force=true 时强制重新生成（跳过缓存并覆盖旧内容）；默认命中缓存直接返回
