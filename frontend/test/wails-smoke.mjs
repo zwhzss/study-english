@@ -82,15 +82,15 @@ assert('StartStreamDialogue 被调用', !!last, JSON.stringify(last));
 assert('发送文本正确', last?.text === 'Hello!', last?.text);
 
 // 5. ai:delta → 文字逐字显示
-await page.evaluate(() => window.__wailsMock.emit('ai:delta', { session_id: 99, delta: 'Hi ' }));
+await page.evaluate(() => window.__wailsMock.emit('aidelta', { session_id: 99, delta: 'Hi ' }));
 await page.waitForTimeout(300);
-await page.evaluate(() => window.__wailsMock.emit('ai:delta', { session_id: 99, delta: 'there!' }));
+await page.evaluate(() => window.__wailsMock.emit('aidelta', { session_id: 99, delta: 'there!' }));
 await page.waitForTimeout(500);
 const text = await page.evaluate(() => document.body.innerText);
 assert('ai:delta 文字显示（Hi there!）', text.includes('Hi there!'), text.slice(0, 150));
 
 // 6. ai:done → sending 复位：填新文本后发送按钮应恢复可用（可发下一条 = 不卡死）
-await page.evaluate(() => window.__wailsMock.emit('ai:done', { session_id: 99, message: { speaker: 'waiter', speaker_name: '服务员', content: 'Hi there!', audio_url: '' } }));
+await page.evaluate(() => window.__wailsMock.emit('aidone', { session_id: 99, message: { speaker: 'waiter', speaker_name: '服务员', content: 'Hi there!', audio_url: '' } }));
 await page.waitForTimeout(600);
 await page.evaluate(() => {
   const el = document.querySelector('input');
@@ -108,7 +108,7 @@ assert('ai:done 后发送按钮恢复（可发下一条）', btnDisabled === fal
 // 7. ai:audio → 收到事件（audio_url 用于播放）
 let audioReceived = false;
 page.on('console', (m) => { if (m.text().includes('audio')) audioReceived = true; });
-await page.evaluate(() => window.__wailsMock.emit('ai:audio', { session_id: 99, audio_url: '/media/audio/test.mp3' }));
+await page.evaluate(() => window.__wailsMock.emit('aiaudio', { session_id: 99, audio_url: '/media/audio/test.mp3' }));
 await page.waitForTimeout(600);
 const audioElems = await page.evaluate(() => [...document.querySelectorAll('audio')].map((a) => a.src));
 assert('ai:audio 事件处理（audio 元素或播放尝试）', audioElems.length > 0 || true, audioElems.join(','));

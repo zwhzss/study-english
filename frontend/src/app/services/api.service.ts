@@ -190,16 +190,16 @@ export class ApiService {
             this.ngZone.run(() => onAudioCb(data.audio_url));
           }
         };
-        rt.EventsOn('ai:delta', onDelta);
-        rt.EventsOn('ai:done', onDone);
-        rt.EventsOn('ai:audio', onAudio);
+        rt.EventsOn('aidelta', onDelta);
+        rt.EventsOn('aidone', onDone);
+        rt.EventsOn('aiaudio', onAudio);
         this.wails<void>('StartStreamDialogue', sessionId, text).subscribe({
           error: (e) => { sub.error(e); },
         });
         return () => {
-          rt.EventsOff('ai:delta');
-          rt.EventsOff('ai:done');
-          rt.EventsOff('ai:audio');
+          rt.EventsOff('aidelta');
+          rt.EventsOff('aidone');
+          rt.EventsOff('aiaudio');
         };
       });
     }

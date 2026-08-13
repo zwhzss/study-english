@@ -154,20 +154,23 @@ func (a *App) StartStreamDialogue(sessionID uint, text string) error {
 	a.logf("对话流式开始 session=%d text=%q", sessionID, text)
 	// 注册 TTS 完成回调（本次会话）：合成完成 → 推送 ai:audio 事件
 	a.dgSvc.SetAudioCallback(func(sid uint, url string) {
-		runtime.EventsEmit(a.ctx, "ai:audio", map[string]any{"session_id": sid, "audio_url": url})
+		runtime.EventsEmit(a.ctx, "aiaudio", map[string]any{"session_id": sid, "audio_url": url})
+		a.logf("已推送 aiaudio 事件 session=%d url=%s", sid, url)
 	})
 	go func() {
 		t0 := time.Now()
 		_, aiMsg, err := a.dgSvc.StreamReply(context.Background(), sessionID, text, func(delta string) error {
-			runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{"session_id": sessionID, "delta": delta})
+			runtime.EventsEmit(a.ctx, "aidelta", map[string]any{"session_id": sessionID, "delta": delta})
 			return nil
 		})
 		a.logf("对话流式完成 session=%d 耗时 %.1fs err=%v", sessionID, time.Since(t0).Seconds(), err)
 		if err != nil {
-			runtime.EventsEmit(a.ctx, "ai:done", map[string]any{"session_id": sessionID, "error": err.Error()})
+			runtime.EventsEmit(a.ctx, "aidone", map[string]any{"session_id": sessionID, "error": err.Error()})
+			a.logf("已推送 aidone(error) session=%d", sessionID)
 			return
 		}
-		runtime.EventsEmit(a.ctx, "ai:done", map[string]any{"session_id": sessionID, "message": aiMsg})
+		runtime.EventsEmit(a.ctx, "aidone", map[string]any{"session_id": sessionID, "message": aiMsg})
+		a.logf("已推送 aidone 事件 session=%d", sessionID)
 	}()
 	return nil
 }
