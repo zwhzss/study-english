@@ -53,6 +53,10 @@ export class TextbooksComponent implements OnInit, OnDestroy {
   error = '';
   /** 全库级操作的全局进行中遮罩文案（空=不显示） */
   globalBusy = '';
+  /** 教材库过滤条件 */
+  libFilterStage = '';
+  libFilterGrade = '';
+  libFilterKeyword = '';
 
   /** 全文朗读状态（readingIdx=当前播放句下标，-1 未播放） */
   readingAll = false;
@@ -99,10 +103,20 @@ export class TextbooksComponent implements OnInit, OnDestroy {
     return this.meta.textbooks.filter((t) => t.stage === this.form.stage);
   }
 
-  /** 教材库列表（跟随创建表单的阶段过滤） */
+  /** 教材库列表（独立过滤：阶段 + 年级 + 名称关键词） */
   get libraryTextbooks(): Textbook[] {
-    if (!this.form.stage) return this.textbooks;
-    return this.textbooks.filter((t) => t.stage === this.form.stage);
+    return this.textbooks.filter((t) => {
+      if (this.libFilterStage && t.stage !== this.libFilterStage) return false;
+      if (this.libFilterGrade && t.grade !== this.libFilterGrade) return false;
+      if (this.libFilterKeyword && !t.name.includes(this.libFilterKeyword.trim())) return false;
+      return true;
+    });
+  }
+
+  /** 教材库过滤：可选阶段 */
+  get libGradeOptions(): string[] {
+    if (!this.meta || !this.libFilterStage) return [];
+    return this.meta.grades[this.libFilterStage] || [];
   }
 
   /** 当前阶段可选年级 */

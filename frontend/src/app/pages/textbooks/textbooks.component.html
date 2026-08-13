@@ -11,8 +11,19 @@
 
     <div class="side-body" *ngIf="!sidebarCollapsed">
       <!-- 教材库（主体，占主要空间） -->
-      <div class="tb-list" *ngIf="libraryTextbooks.length">
+      <div class="tb-list" *ngIf="libraryTextbooks.length || textbooks.length">
         <h3>📚 教材库（{{ libraryTextbooks.length }}/{{ textbooks.length }}）</h3>
+        <div class="lib-filter">
+          <select [(ngModel)]="libFilterStage" (change)="libFilterGrade = ''">
+            <option value="">全部阶段</option>
+            <option *ngFor="let s of meta?.stages || ['小学','初中','高中','成人']" [value]="s">{{ s }}</option>
+          </select>
+          <select [(ngModel)]="libFilterGrade" [disabled]="!libFilterStage">
+            <option value="">全部年级</option>
+            <option *ngFor="let g of libGradeOptions" [value]="g">{{ g }}</option>
+          </select>
+          <input [(ngModel)]="libFilterKeyword" placeholder="搜索教材名…" />
+        </div>
         <div class="tb-item" *ngFor="let tb of libraryTextbooks; let i = index"
              [class.active]="selectedTextbook?.id === tb.id"
              (click)="selectTextbook(tb)">

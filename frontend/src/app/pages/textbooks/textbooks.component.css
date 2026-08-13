@@ -386,3 +386,7 @@
 .fold-panel[open] summary::before { transform: rotate(90deg); }
 .fold-panel .create-box { padding: 4px 2px 10px; }
 .fold-panel .side-links { padding: 4px 2px 10px; }
+
+/* 教材库过滤条 */
+.lib-filter { display: flex; gap: 6px; margin-bottom: 8px; }
+.lib-filter select, .lib-filter input { flex: 1; min-width: 0; border: 1px solid #dce3ec; border-radius: 6px; padding: 5px 6px; font-size: 12px; }
