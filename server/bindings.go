@@ -6,6 +6,7 @@ import (
 	"errors"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -148,11 +149,14 @@ func (a *App) SendDialogueMessage(sessionID uint, text string) (*DialogueReply, 
 
 // StartStreamDialogue 流式发送：逐字通过 Wails 事件 ai:delta 推送，结束推送 ai:done
 func (a *App) StartStreamDialogue(sessionID uint, text string) error {
+	a.logf("对话流式开始 session=%d text=%q", sessionID, text)
 	go func() {
+		t0 := time.Now()
 		_, aiMsg, err := a.dgSvc.StreamReply(context.Background(), sessionID, text, func(delta string) error {
 			runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{"session_id": sessionID, "delta": delta})
 			return nil
 		})
+		a.logf("对话流式完成 session=%d 耗时 %.1fs err=%v", sessionID, time.Since(t0).Seconds(), err)
 		if err != nil {
 			runtime.EventsEmit(a.ctx, "ai:done", map[string]any{"session_id": sessionID, "error": err.Error()})
 			return
