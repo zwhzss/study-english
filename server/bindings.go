@@ -272,6 +272,11 @@ func (a *App) BackfillAudio() (*service.AudioBackfillResult, error) {
 	return a.tbSvc.BackfillMissingAudio()
 }
 
+// MigrateImages 批量把历史课文外链图片下载到本地
+func (a *App) MigrateImages() (*service.ImageMigrateResult, error) {
+	return a.tbSvc.MigrateExternalImages()
+}
+
 // ========== 目录 CRUD ==========
 func (a *App) CreateCatalogItem(textbookID uint, unit, lesson, title, scene string) (*model.CatalogItem, error) {
 	return a.tbSvc.CreateCatalogItem(textbookID, unit, lesson, title, scene)
