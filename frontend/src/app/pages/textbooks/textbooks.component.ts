@@ -439,10 +439,34 @@ export class TextbooksComponent implements OnInit {
       error: (e: any) => { this.importing = false; this.error = '导入失败：' + this.errMsg(e); },
     });
     if (this.importFile) {
-      use(this.api.importLessonPDF(this.selectedLesson.id, this.importTitle, this.importFile));
+      const name = this.importFile.name.toLowerCase();
+      const isImg = name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.webp');
+      if (isImg) {
+        use(this.api.importLessonImage(this.selectedLesson.id, this.importTitle, this.importFile));
+      } else {
+        use(this.api.importLessonPDF(this.selectedLesson.id, this.importTitle, this.importFile));
+      }
     } else {
       use(this.api.importLessonText(this.selectedLesson.id, this.importTitle, this.importText));
     }
+  }
+
+  /** 角色音色中文标签（多角色对话气泡显示） */
+  roleVoice(role: string): string {
+    const m: Record<string, string> = { boy: '男童音色', girl: '女童音色', student: '童声音色', teacher: '年轻女教师音色', male_teacher: '年轻男教师音色', grandpa: '老年男声音色', grandma: '老年女声音色', narrator: '旁白', brother: '青年男声', sister: '青年女声', uncle: '中年男声', aunt: '中年女声', mother: '妈妈音色', father: '爸爸音色', waiter: '男声', customer: '女声', farmer: '浑厚男声', worker: '男声', doctor: '女声', nurse: '女声', police: '男声', friend: '女声' };
+    return m[role] || '标准发音';
+  }
+
+  /** 导入课文多角色对话全文朗读（逐句按角色音色轮播） */
+  playImportedDialogue(): void {
+    const items = (this.importedContent?.dialogue ?? []).map((d) => ({ text: d.text, url: d.audio_url }));
+    if (!items.length) return;
+    this.readingAll = true;
+    this.readingIdx = -1;
+    this.audio.playQueue(items,
+      (i) => { this.readingIdx = i; },
+      () => { this.readingAll = false; this.readingIdx = -1; }
+    );
   }
 
   /** 朗读文本：优先 TTS URL，无则浏览器朗读 */

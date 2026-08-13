@@ -132,6 +132,24 @@ export class ApiService {
     if (this.inWails()) return this.wails<ImportedContent>('ImportLesson', lessonId, { title, text, pdf_base64: '', image_base64: '' }).pipe(map((d) => ({ data: d })));
     return this.http.post<ApiResponse<ImportedContent>>(`${this.base}/lessons/${lessonId}/import`, { title, text });
   }
+  importLessonImage(lessonId: number, title: string, file: File): Observable<ApiResponse<ImportedContent>> {
+    if (this.inWails()) {
+      return from(file.arrayBuffer()).pipe(
+        mergeMap((buf) => {
+          const bytes = new Uint8Array(buf);
+          let bin = '';
+          for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          const b64 = btoa(bin);
+          return this.wails<ImportedContent>('ImportLesson', lessonId, { title, text: '', pdf_base64: '', image_base64: b64 }).pipe(map((d) => ({ data: d })));
+        })
+      );
+    }
+    const fd = new FormData();
+    fd.append('file', file);
+    if (title) fd.append('title', title);
+    return this.http.post<ApiResponse<ImportedContent>>(`${this.base}/lessons/${lessonId}/import`, fd);
+  }
+
   importLessonPDF(lessonId: number, title: string, file: File): Observable<ApiResponse<ImportedContent>> {
     if (this.inWails()) {
       return from(file.arrayBuffer()).pipe(

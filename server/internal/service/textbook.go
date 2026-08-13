@@ -818,6 +818,9 @@ func (s *TextbookService) GetLessonContent(ctx context.Context, catalogItemID ui
 		if err := s.db.Where("catalog_item_id = ?", catalogItemID).First(&content).Error; err != nil {
 			return nil, fmt.Errorf("该课时尚未导入课文，请先导入: %w", err)
 		}
+		if content.DialogueJSON != "" {
+			_ = json.Unmarshal([]byte(content.DialogueJSON), &content.Dialogue)
+		}
 		return &content, nil
 	}
 	// 默认 AI 创作

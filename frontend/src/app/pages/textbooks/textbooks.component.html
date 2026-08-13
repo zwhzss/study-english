@@ -217,6 +217,25 @@
           <div class="it-body">{{ importedContent.imported_text }}</div>
         </div>
 
+        <!-- 结构化多角色对话（导入后 LLM 自动拆分 + 按角色配音） -->
+        <div class="imported-dialogue" *ngIf="importedContent?.dialogue?.length">
+          <h3>🎭 多角色对话 <span class="tag">AI 结构化 · 按角色配音</span></h3>
+          <div class="turn" *ngFor="let t of importedContent!.dialogue; index as i">
+            <div class="bubble" [style.--role-color]="roleColor(t.role)" (click)="play(t.text, t.audio_url)">
+              <span class="avatar">{{ roleIcon(t.role) }}</span>
+              <div class="msg">
+                <span class="role-name" [style.color]="roleColor(t.role)">{{ t.role_name }} <i>{{ t.role }}</i></span>
+                <span class="text">{{ t.text }}</span>
+                <span class="voice-tag">{{ roleVoice(t.role) }}</span>
+              </div>
+              <span class="play-btn">🔊</span>
+            </div>
+          </div>
+          <div class="it-actions">
+            <button class="btn ghost" (click)="playImportedDialogue()">🔊 全文朗读（角色轮播）</button>
+          </div>
+        </div>
+
         <div class="empty-box" *ngIf="!importedContent">
           <h2>📘 {{ selectedLesson.title }}</h2>
           <p>尚未导入真实课文。可通过粘贴文本或上传 PDF 录入教材原文（版权合规通道）。</p>

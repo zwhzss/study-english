@@ -82,6 +82,7 @@ export interface ImportedContent {
   imported_text: string;
   source: string;
   status: string;
+  dialogue?: { role: string; role_name: string; text: string; audio_url?: string }[];
 }
 
 export interface AIRole {

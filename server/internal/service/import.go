@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -40,6 +41,8 @@ func (s *TextbookService) ImportLessonText(catalogItemID uint, title, text strin
 		if err := s.db.Save(&existing).Error; err != nil {
 			return nil, err
 		}
+		// 更新后重新结构化 + 配音
+		s.structureAndVoice(&existing)
 		return &existing, nil
 	}
 	if err := s.db.Create(content).Error; err != nil {
@@ -47,7 +50,41 @@ func (s *TextbookService) ImportLessonText(catalogItemID uint, title, text strin
 	}
 	// 更新目录项状态
 	s.db.Model(&item).Update("status", model.StatusPublished)
+	// 异步：LLM 结构化课文（识别角色+拆分对话）+ 按角色 TTS 配音
+	s.structureAndVoice(content)
 	return content, nil
+}
+
+// structureAndVoice 把导入的课文原文用 LLM 拆分为多角色对话，并为每句按角色合成 TTS 音频
+func (s *TextbookService) structureAndVoice(content *model.ImportedContent) {
+	go func() {
+		system := `你是英语课文分析专家。下面是导入的英语课文原文。请识别其中的说话角色，把课文拆分为多角色对话。
+每个对话轮次：role 用英文角色标识（必须从以下角色库选择：boy/girl/student/teacher/male_teacher/grandpa/grandma/brother/sister/uncle/aunt/mother/father/waiter/customer/clerk/driver/farmer/worker/doctor/nurse/police/friend/narrator），role_name 用中文，text 为该角色说的原句。
+若原文是纯叙述、没有明显对话角色，则全部用 narrator（旁白，中文名"旁白"），并尽量按句拆分。
+严格输出 JSON，不要任何其他文字：{"dialogue":[{"role":"...","role_name":"...","text":"..."}]}`
+		raw, err := s.reg.LLM().ChatJSON(context.Background(), system, content.Text)
+		if err != nil {
+			s.log.Warn("课文结构化失败", "catalog_item_id", content.CatalogItemID, "error", err.Error())
+			return
+		}
+		var payload struct {
+			Dialogue []model.DialogueTurn `json:"dialogue"`
+		}
+		if err := json.Unmarshal([]byte(raw), &payload); err != nil || len(payload.Dialogue) == 0 {
+			s.log.Warn("课文结构化解析失败", "catalog_item_id", content.CatalogItemID, "raw", truncateForLog(raw, 200))
+			return
+		}
+		// 每句按角色合成 TTS（edge-tts 多角色音色）
+		for i := range payload.Dialogue {
+			url, err := s.reg.TTS().Synthesize(payload.Dialogue[i].Text, payload.Dialogue[i].Role)
+			if err == nil {
+				payload.Dialogue[i].AudioURL = url
+			}
+		}
+		b, _ := json.Marshal(payload.Dialogue)
+		s.db.Model(content).Update("dialogue_json", string(b))
+		s.log.Info("课文结构化完成", "catalog_item_id", content.CatalogItemID, "rounds", len(payload.Dialogue))
+	}()
 }
 
 // ImportLessonPDF 导入 PDF 课文：纯 Go 提取文本（免 CGO），无 OCR

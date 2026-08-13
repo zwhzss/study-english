@@ -86,10 +86,14 @@ type ImportedContent struct {
 	Unit          string    `gorm:"size:50" json:"unit"`
 	Title         string    `gorm:"size:200" json:"title"`
 	Text          string    `gorm:"type:text" json:"imported_text"` // 课文原文
+	DialogueJSON  string    `gorm:"type:text" json:"-"`             // LLM 结构化后的多角色对话（含各角色音色音频）
 	Source        string    `gorm:"size:20" json:"source"`          // imported
 	Status        string    `gorm:"size:20;default:published" json:"status"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+
+	// 便捷字段（前端展示）
+	Dialogue []DialogueTurn `gorm:"-" json:"dialogue"`
 }
 
 // LessonContent 旧版课时内容（v1 单表，仅用于数据迁移到 AIContent，不再用于新逻辑）
