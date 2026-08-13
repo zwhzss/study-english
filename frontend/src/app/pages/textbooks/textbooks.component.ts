@@ -51,6 +51,9 @@ export class TextbooksComponent implements OnInit, OnDestroy {
   loadingContent = false;
   contentLoading = false; // 加载已有内容中（区别于 loadingContent=AI 拉取中）
   error = '';
+  /** 全库级操作的全局进行中遮罩文案（空=不显示） */
+  globalBusy = '';
+
   /** 全文朗读状态（readingIdx=当前播放句下标，-1 未播放） */
   readingAll = false;
   readingIdx = -1;
@@ -399,14 +402,15 @@ export class TextbooksComponent implements OnInit, OnDestroy {
   /** 补合成历史课文缺失音频（旧数据 TTS 未生成） */
   backfillAudio(): void {
     if (!confirm('扫描所有课文，对缺失音频的对话/词汇用 edge-tts 补合成（可能耗时几分钟，期间请勿关闭）。确定开始？')) return;
-    this.notice = '🎵 正在补合成缺失音频…请稍候';
     this.error = '';
+    this.globalBusy = '🎵 正在补合成缺失音频…（全库扫描，可能几分钟，请勿关闭）';
     this.api.backfillAudio().subscribe({
       next: (res) => {
         const d = res.data;
-        this.notice = `✅ 补合成完成：${d.synthesized} 句音频已补上（涉及 ${d.lessons} 个课时）`;
+        this.globalBusy = '';
+        alert(`✅ 补合成完成：${d.synthesized} 句音频已补上（涉及 ${d.lessons} 个课时）`);
       },
-      error: (e) => { this.error = '补合成失败：' + this.errMsg(e); this.notice = ''; },
+      error: (e) => { this.globalBusy = ''; this.error = '补合成失败：' + this.errMsg(e); },
     });
   }
 
@@ -414,7 +418,7 @@ export class TextbooksComponent implements OnInit, OnDestroy {
   fixImages(): void {
     if (!confirm('把历史课文里的外链图片（硅基流动临时 URL / unsplash）批量下载到本地，永久保存？\n（下载失败的保留原外链）')) return;
     this.error = '';
-    this.notice = '⏳ 正在下载外链图片…请稍候';
+    this.globalBusy = '🗜 正在下载外链图片…（全库扫描，请稍候）';
     this.api.migrateImages().subscribe({
       next: (res) => {
         const d = res.data;
@@ -424,10 +428,12 @@ export class TextbooksComponent implements OnInit, OnDestroy {
           msg += `\n\n失败图片所在课时：${names}\n（图片 URL 已过期，请对相应课时点「🔄 重新生成」恢复）`;
         }
         alert(msg);
+        this.globalBusy = '';
         this.notice = `✅ 修复完成：${d.downloaded} 张已下载，${d.failed} 张失败`;
         if (this.selectedTextbook) this.loadCatalog(this.selectedTextbook.id); // 刷新目录
       },
       error: (e) => {
+        this.globalBusy = '';
         this.error = '图片修复失败：' + this.errMsg(e);
         this.notice = '';
       },

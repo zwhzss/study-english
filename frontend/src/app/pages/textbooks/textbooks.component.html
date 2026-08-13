@@ -272,3 +272,11 @@
     </section>
   </main>
 </div>
+
+<!-- 全库级操作进行中遮罩 -->
+<div class="global-busy" *ngIf="globalBusy">
+  <div class="gb-box">
+    <div class="gb-spin"></div>
+    <p>{{ globalBusy }}</p>
+  </div>
+</div>
