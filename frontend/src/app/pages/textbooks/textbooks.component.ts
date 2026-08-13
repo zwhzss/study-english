@@ -236,14 +236,17 @@ export class TextbooksComponent implements OnInit, OnDestroy {
     this.error = '';
     this.notice = '';
     this.cancelPolling(); // 取消当前轮询订阅（不删除进行中任务记录）
-    // 该课时有进行中任务 → 恢复"拉取中"状态并继续跟随
+    // 有内容（AI 或导入）→ 直接加载，忽略可能残留的 polling 记录（内容已入库）
+    if (lesson.has_content) {
+      this.loadContent(lesson.id, 'ai');
+      return;
+    }
+    // 无内容但存在进行中任务 → 恢复"生成中"状态并继续跟随
     const taskId = this.polling.get(lesson.id);
     if (taskId) {
       this.loadingContent = true;
       this.notice = '⏳ AI 生成中…（后台继续，完成后自动显示）';
       this.pollTask(taskId, lesson);
-    } else if (lesson.has_content) {
-      this.loadContent(lesson.id, 'ai');
     }
   }
 
