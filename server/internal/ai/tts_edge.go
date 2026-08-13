@@ -16,6 +16,7 @@ import (
 // 100+ 音色免费无 Key，按角色映射不同音色（男孩/女孩/男女教师/爷爷奶奶等），完全离线合成
 type EdgeTTS struct {
 	dataDir string
+	sem     chan struct{} // 合成并发限制（最多 2 个 edge-tts 进程同时跑，防资源占用峰值）
 }
 
 // edgeRoleVoices 角色 → edge-tts 英文音色（神经网络语音，自然度高）
@@ -63,7 +64,7 @@ var edgeRoleVoices = map[string]string{
 }
 
 func NewEdgeTTS(dataDir string) *EdgeTTS {
-	return &EdgeTTS{dataDir: dataDir}
+	return &EdgeTTS{dataDir: dataDir, sem: make(chan struct{}, 2)}
 }
 
 // voiceForRole 角色 → edge-tts 音色：先精确匹配，再按关键词（boy/girl/teacher/grandpa...）模糊匹配
@@ -100,6 +101,10 @@ func (t *EdgeTTS) Synthesize(text, role string) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
+
+	// 并发限制：最多 2 个 edge-tts 进程同时合成（防多气泡连点造成资源峰值）
+	t.sem <- struct{}{}
+	defer func() { <-t.sem }()
 
 	// 调用 edge-tts CLI（首次需 pip install edge-tts）
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
