@@ -245,14 +245,21 @@ func (s *DialogueService) saveAIMessage(sessionID uint, reply string, aiRole mod
 	if reply == "" {
 		reply = "I see. Please go on!"
 	}
-	audioURL, _ := s.reg.TTS().Synthesize(reply, aiRole.Role)
 	aiMsg := &model.DialogueMessage{
 		SessionID: sessionID, Speaker: aiRole.Role,
-		SpeakerName: aiRole.RoleName, IsUser: false, Content: reply, AudioURL: audioURL,
+		SpeakerName: aiRole.RoleName, IsUser: false, Content: reply,
 	}
 	if err := s.db.Create(aiMsg).Error; err != nil {
 		return nil, err
 	}
+	// TTS 异步合成并回填 audio_url：不阻塞 ai:done（LLM 完成即返回，前端立即显示/朗读兜底，
+	// 音频合成好后历史消息自动带上，可随时播放）
+	go func() {
+		url, err := s.reg.TTS().Synthesize(reply, aiRole.Role)
+		if err == nil && url != "" {
+			s.db.Model(aiMsg).Update("audio_url", url)
+		}
+	}()
 	return aiMsg, nil
 }
 
