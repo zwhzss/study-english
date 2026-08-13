@@ -1002,7 +1002,81 @@ func (s *TextbookService) persistImage(ctx context.Context, url string) string {
 	return "/media/images/" + name
 }
 
-// ImageMigrateResult 外链图片批量本地化结果
+// AudioBackfillResult 补合成缺失音频结果
+type AudioBackfillResult struct {
+	Lessons     int `json:"lessons"`     // 修复的课时数
+	Synthesized int `json:"synthesized"` // 补合成的音频句数
+}
+
+// BackfillMissingAudio 批量补合成历史课文中 audio_url 为空的对话/词汇（旧数据 TTS 未生成时产生）
+// 课时间串行、课时内并发（EdgeTTS 信号量限流），避免并发爆炸
+func (s *TextbookService) BackfillMissingAudio() (*AudioBackfillResult, error) {
+	var contents []model.AIContent
+	if err := s.db.Find(&contents).Error; err != nil {
+		return nil, err
+	}
+	result := &AudioBackfillResult{}
+	for i := range contents {
+		c := &contents[i]
+		var d []model.DialogueTurn
+		var v []model.VocabItem
+		if c.DialogueJSON != "" {
+			_ = json.Unmarshal([]byte(c.DialogueJSON), &d)
+		}
+		if c.KeyVocabJSON != "" {
+			_ = json.Unmarshal([]byte(c.KeyVocabJSON), &v)
+		}
+		changed := false
+		var wg sync.WaitGroup
+		synth := func(text, role string, set func(url string)) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				url, err := s.reg.TTS().Synthesize(text, role)
+				if err == nil && url != "" {
+					set(url)
+				}
+			}()
+		}
+		for j := range d {
+			if d[j].AudioURL == "" {
+				idx := j
+				synth(d[j].Text, d[j].Role, func(url string) { d[idx].AudioURL = url })
+			}
+		}
+		for j := range v {
+			if v[j].AudioURL == "" {
+				idx := j
+				synth(v[j].Example, "vocab", func(url string) { v[idx].AudioURL = url })
+			}
+		}
+		wg.Wait()
+		// 统计实际补上的
+		for _, t := range d {
+			if t.AudioURL != "" {
+				changed = true
+				result.Synthesized++
+			}
+		}
+		for _, t := range v {
+			if t.AudioURL != "" {
+				changed = true
+				result.Synthesized++
+			}
+		}
+		if changed {
+			if b, err := json.Marshal(d); err == nil {
+				s.db.Model(c).Update("dialogue_json", string(b))
+			}
+			if b, err := json.Marshal(v); err == nil {
+				s.db.Model(c).Update("key_vocab_json", string(b))
+			}
+			result.Lessons++
+		}
+	}
+	return result, nil
+}
+
 type ImageMigrateResult struct {
 	Lessons    int `json:"lessons"`    // 修改的课时数
 	Downloaded int `json:"downloaded"` // 成功下载的图片数
@@ -1106,19 +1180,6 @@ func (s *TextbookService) assembleAIContent(c *model.AIContent) (*model.AIConten
 	}
 	if c.SVGsJSON != "" {
 		_ = json.Unmarshal([]byte(c.SVGsJSON), &svgs)
-	}
-	// 音频：优先用已持久化的 audio_url（读库零成本，不调 TTS）；旧数据缺失时才合成
-	for i := range d {
-		if d[i].AudioURL == "" {
-			url, _ := s.reg.TTS().Synthesize(d[i].Text, d[i].Role)
-			d[i].AudioURL = url
-		}
-	}
-	for i := range v {
-		if v[i].AudioURL == "" {
-			url, _ := s.reg.TTS().Synthesize(v[i].Example, "vocab")
-			v[i].AudioURL = url
-		}
 	}
 	c.Dialogue = d
 	c.KeyVocab = v

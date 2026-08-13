@@ -267,8 +267,12 @@ func (a *App) TTSStatus() (*TTSStatusData, error) {
 	return st, nil
 }
 
-// ========== 目录 CRUD ==========
+// BackfillAudio 批量补合成历史课文缺失音频
+func (a *App) BackfillAudio() (*service.AudioBackfillResult, error) {
+	return a.tbSvc.BackfillMissingAudio()
+}
 
+// ========== 目录 CRUD ==========
 func (a *App) CreateCatalogItem(textbookID uint, unit, lesson, title, scene string) (*model.CatalogItem, error) {
 	return a.tbSvc.CreateCatalogItem(textbookID, unit, lesson, title, scene)
 }

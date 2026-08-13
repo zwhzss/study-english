@@ -103,6 +103,7 @@ func NewRouter(cfg *config.Config, svc *service.TextbookService, dsvc *service.D
 		// 语音识别（对话语音输入 / 发音评测）
 		api.POST("/asr/transcribe", h.TranscribeASR)
 		api.POST("/images/migrate", h.MigrateImages) // 外链图片批量本地化
+		api.POST("/audio/backfill", h.BackfillAudio) // 补合成历史课文缺失音频
 	}
 
 	// 若 Angular 构建产物存在，由 Gin 托管静态文件（单端口部署 + SPA fallback）

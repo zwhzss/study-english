@@ -396,6 +396,20 @@ export class TextbooksComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** 补合成历史课文缺失音频（旧数据 TTS 未生成） */
+  backfillAudio(): void {
+    if (!confirm('扫描所有课文，对缺失音频的对话/词汇用 edge-tts 补合成（可能耗时几分钟，期间请勿关闭）。确定开始？')) return;
+    this.notice = '🎵 正在补合成缺失音频…请稍候';
+    this.error = '';
+    this.api.backfillAudio().subscribe({
+      next: (res) => {
+        const d = res.data;
+        this.notice = `✅ 补合成完成：${d.synthesized} 句音频已补上（涉及 ${d.lessons} 个课时）`;
+      },
+      error: (e) => { this.error = '补合成失败：' + this.errMsg(e); this.notice = ''; },
+    });
+  }
+
   /** 修复历史外链图片：批量下载到本地（一次性，图片永久化） */
   fixImages(): void {
     if (!confirm('把历史课文里的外链图片（硅基流动临时 URL / unsplash）批量下载到本地，永久保存？\n（下载失败的保留原外链）')) return;

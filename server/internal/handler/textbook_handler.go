@@ -199,6 +199,16 @@ func (h *TextbookHandler) ListTextbooks(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": tbs})
 }
 
+// BackfillAudio POST /api/audio/backfill 批量补合成历史课文缺失的音频
+func (h *TextbookHandler) BackfillAudio(c *gin.Context) {
+	result, err := h.svc.BackfillMissingAudio()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
 // ReorderTextbooks PUT /api/textbooks/order 调整教材库顺序
 // CatalogItemCRUD 目录 CRUD 接口
 

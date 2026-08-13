@@ -126,6 +126,7 @@
                  [routerLink]="['/dialogue', content.catalog_item_id]">🎭 与 AI 角色对话</a>
               <button class="btn ghost" (click)="regenerate()" title="覆盖当前内容，从 AI 重新生成">🔄 重新生成</button>
             <button class="btn ghost" (click)="fixImages()" title="把历史课文外链图片下载到本地（永久保存）">🗜 修复外链图片</button>
+            <button class="btn ghost" (click)="backfillAudio()" title="补合成历史课文缺失的音频">🎵 补合成音频</button>
             </div>
           </div>
 

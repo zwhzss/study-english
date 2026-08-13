@@ -126,6 +126,12 @@ export class ApiService {
     return this.http.delete<ApiResponse<{ ok: boolean; message: string }>>(`${this.base}/catalog-items/unit`, { body: { textbook_id: textbookId, unit } });
   }
 
+  /** 补合成历史课文缺失音频 */
+  backfillAudio(): Observable<ApiResponse<{ lessons: number; synthesized: number }>> {
+    if (this.inWails()) return this.wails<{ lessons: number; synthesized: number }>('BackfillAudio').pipe(map((d) => ({ data: d })));
+    return this.http.post<ApiResponse<{ lessons: number; synthesized: number }>>(`${this.base}/audio/backfill`, {});
+  }
+
   getTextbookMeta(): Observable<ApiResponse<TextbookMeta>> {
     if (this.inWails()) return this.wails<TextbookMeta>('TextbookMeta').pipe(map((d) => ({ data: d })));
     return this.http.get<ApiResponse<TextbookMeta>>(`${this.base}/textbooks/meta`);
