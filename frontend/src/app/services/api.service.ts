@@ -166,21 +166,24 @@ export class ApiService {
   /** 流式发送（SSE 或 Wails 事件）——返回 Observable 直接订阅消息块 */
   streamDialogue(sessionId: number, text: string, onComplete?: (ai: DialogueMessage) => void): Observable<string> {
     if (this.inWails()) {
-      // Wails 事件通道：订阅 ai:delta / ai:done
+      // Wails 事件通道：订阅 ai:delta / ai:done（事件回调在 Angular zone 外，必须包 ngZone.run 触发变更检测）
       return new Observable<string>((sub) => {
         const rt = (window as any).runtime;
         if (!rt?.EventsOn) { sub.error(new Error('runtime 不可用')); return; }
-        let full = '';
         const onDelta = (_: any, data: any) => {
-          if (data?.session_id === sessionId) { full += data.delta || ''; sub.next(data.delta || ''); }
+          if (data?.session_id === sessionId) {
+            this.ngZone.run(() => sub.next(data.delta || ''));
+          }
         };
         const onDone = (_: any, data: any) => {
           if (data?.session_id !== sessionId) return;
-          if (data.error) sub.error(new Error(data.error));
-          else {
-            if (data.message && onComplete) onComplete(data.message);
-            sub.complete();
-          }
+          this.ngZone.run(() => {
+            if (data.error) sub.error(new Error(data.error));
+            else {
+              if (data.message && onComplete) onComplete(data.message);
+              sub.complete();
+            }
+          });
         };
         rt.EventsOn('ai:delta', onDelta);
         rt.EventsOn('ai:done', onDone);
