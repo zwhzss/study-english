@@ -13,11 +13,19 @@ wailsjs/
 
 # 运行数据（数据库、音频、图片、录音）
 server/data/
+server/internal/service/data/
 local-image/models/
+
+# 教材配套录音（出版社版权材料，仅本地保存，不入库）
+3年级上册/
+3年级下册/
+4年级上册/
+4年级下册/
 
 # IDE / 系统
 .idea/
 .vscode/
+.reasonix/
 .DS_Store
 *.swp
 
