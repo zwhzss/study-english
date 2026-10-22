@@ -10,13 +10,16 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"study-english/server/internal/config"
 )
 
 // DeepSeekLLM DeepSeek（OpenAI 兼容协议）实现
 type DeepSeekLLM struct {
-	baseURL string
-	apiKey  string
-	model   string
+	baseURL   string
+	apiKey    string
+	model     string
+	maxTokens int // 单次最大输出 token；0 时取 config.DefaultLLMMaxTokens
 }
 
 type chatRequest struct {
@@ -34,13 +37,25 @@ type chatRequest struct {
 	} `json:"response_format,omitempty"`
 }
 
-// maxOutputTokens 内容生成的最大输出 token（多角色对话+词汇+语法+练习+SVG 量大，防止截断）
-const maxOutputTokens = 65535
-
 type chatResponse struct {
 	Choices []struct {
 		Message ChatMessage `json:"message"`
+		// FinishReason 区分"模型说完了"(stop) 与"被 max_tokens 截断"(length)——
+		// 不读它就只能把截断误判成"模型吐了坏 JSON"，排查方向完全跑偏
+		FinishReason string `json:"finish_reason"`
 	} `json:"choices"`
+	Usage struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
+}
+
+// effectiveMaxTokens 取生效的输出上限（未配置时回落默认值）
+func (d *DeepSeekLLM) effectiveMaxTokens() int {
+	if d.maxTokens > 0 {
+		return d.maxTokens
+	}
+	return config.DefaultLLMMaxTokens
 }
 
 func (d *DeepSeekLLM) ChatJSON(ctx context.Context, system, user string) (string, error) {
@@ -49,7 +64,7 @@ func (d *DeepSeekLLM) ChatJSON(ctx context.Context, system, user string) (string
 	reqBody := chatRequest{
 		Model:       d.model,
 		Temperature: 0.6,
-		MaxTokens:   maxOutputTokens,
+		MaxTokens:   d.effectiveMaxTokens(),
 		Messages: []ChatMessage{
 			{Role: "system", Content: system},
 			{Role: "user", Content: user},
@@ -197,7 +212,12 @@ func (d *DeepSeekLLM) doChat(ctx context.Context, reqBody chatRequest) (string, 
 	if len(cr.Choices) == 0 {
 		return "", fmt.Errorf("大模型返回空 choices")
 	}
-	return cr.Choices[0].Message.Content, nil
+	ch := cr.Choices[0]
+	if ch.FinishReason == "length" {
+		return "", fmt.Errorf("模型输出被 max_tokens=%d 截断（已生成 %d token，finish_reason=length）：调大 LLM_MAX_TOKENS 或换上下文更长的模型",
+			d.effectiveMaxTokens(), cr.Usage.CompletionTokens)
+	}
+	return ch.Message.Content, nil
 }
 
 // Test 验证 API Key 连通性（普通 chat 测试，与 study-math 一致，无需 json_object）

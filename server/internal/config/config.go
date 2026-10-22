@@ -3,7 +3,13 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 )
+
+// DefaultLLMMaxTokens 单次输出上限默认值。
+// 原先硬编码 65535：对 DeepSeek 超出接口上限，对本地 llama.cpp 等于"一路生成到上下文耗尽"
+// （实测 7 token/s 的机器上要跑几十分钟），两者都会表现为难以定位的 JSON 截断。
+const DefaultLLMMaxTokens = 8192
 
 // defaultDataDir 数据目录：优先 %AppData%\StudyEnglish（安装到 Program Files 后程序目录不可写，必须放用户目录）
 func defaultDataDir() string {
@@ -21,6 +27,7 @@ type Config struct {
 	LLMBaseURL    string // 大模型 API 地址（OpenAI 兼容）
 	LLMAPIKey     string // 大模型 API Key
 	LLMModel      string // 对话模型名
+	LLMMaxTokens  int    // 单次最大输出 token（JSON 拉取用；本地 llama.cpp 不能给无界值）
 	TTSType       string // tts 实现类型: mock | openai（自动按 TTS_API_KEY 判断）
 	TTSBaseURL    string // OpenAI 兼容 TTS 地址（如 OpenAI / 硅基流动）
 	TTSAPIKey     string // TTS API Key
@@ -53,6 +60,8 @@ func Load() *Config {
 		DataDir:     getenv("DATA_DIR", dataDir),
 		AllowOrigin: getenv("ALLOW_ORIGIN", "*"),
 		DistDir:     getenv("DIST_DIR", "../frontend/dist/frontend/browser"),
+		// 输出上限属部署级技术参数，走环境变量（模型名/Key 仍由数据库提供）
+		LLMMaxTokens: getenvInt("LLM_MAX_TOKENS", DefaultLLMMaxTokens),
 		// 模型配置默认占位（不读环境变量，由数据库 ai_configs 表提供真实值）
 		LLMBaseURL:    "https://api.deepseek.com",
 		LLMAPIKey:     "",
@@ -80,6 +89,16 @@ func Load() *Config {
 func getenv(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
+	}
+	return def
+}
+
+// getenvInt 读取整数环境变量；缺失或非法时取默认值
+func getenvInt(k string, def int) int {
+	if v := os.Getenv(k); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
 	}
 	return def
 }

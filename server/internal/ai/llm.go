@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"study-english/server/internal/config"
 )
@@ -48,9 +49,10 @@ func NewLLM(cfg *config.Config) LLMProvider {
 		return &MockLLM{}
 	}
 	return &DeepSeekLLM{
-		baseURL: cfg.LLMBaseURL,
-		apiKey:  cfg.LLMAPIKey,
-		model:   cfg.LLMModel,
+		baseURL:   cfg.LLMBaseURL,
+		apiKey:    cfg.LLMAPIKey,
+		model:     cfg.LLMModel,
+		maxTokens: cfg.LLMMaxTokens,
 	}
 }
 
@@ -84,7 +86,47 @@ func ParseJSONPayload[T any](raw string, out *T) error {
 	s = strings.TrimSuffix(s, "```")
 	s = strings.TrimSpace(s)
 	if err := json.Unmarshal([]byte(s), out); err != nil {
-		return fmt.Errorf("解析模型 JSON 输出失败: %w\n原始输出: %.500s", err, raw)
+		return fmt.Errorf("解析模型 JSON 输出失败: %w\n%s", err, jsonErrorContext(s, err))
 	}
 	return nil
+}
+
+// jsonErrorContext 输出解析出错位置前后的片段。
+// 原先固定打印前 500 字节，出错点常在窗口之外（本次就是），等于没给任何线索。
+func jsonErrorContext(s string, err error) string {
+	const span = 120
+	off := 0
+	switch e := err.(type) {
+	case *json.SyntaxError:
+		off = int(e.Offset)
+	case *json.UnmarshalTypeError:
+		off = int(e.Offset)
+	}
+	if off <= 0 || off > len(s) {
+		return fmt.Sprintf("输出共 %d 字节（服务端未给位置），开头：%s", len(s), clipRunes(s, span))
+	}
+	for off > 0 && !utf8.RuneStart(s[off]) { // 对齐到字符边界，避免切出半个汉字
+		off--
+	}
+	lo, hi := max(0, off-span), min(len(s), off+span)
+	for lo > 0 && !utf8.RuneStart(s[lo]) {
+		lo++
+	}
+	for hi < len(s) && !utf8.RuneStart(s[hi]) {
+		hi--
+	}
+	return fmt.Sprintf("输出共 %d 字节，出错位置约第 %d 字节：\n  %s⟪出错点⟫%s",
+		len(s), off, s[lo:off], s[off:hi])
+}
+
+// clipRunes 按字节截断并对齐字符边界
+func clipRunes(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	end := n
+	for end > 0 && !utf8.RuneStart(s[end]) {
+		end--
+	}
+	return s[:end] + "…"
 }

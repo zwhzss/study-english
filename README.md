@@ -91,6 +91,7 @@ cd frontend && npx ng serve      # 终端2：前端 4200（HMR 热更新）
 | `LLM_API_KEY` | 空 | 大模型 Key；**为空则使用内置 mock 内容** |
 | `LLM_BASE_URL` | `https://api.deepseek.com` | OpenAI 兼容地址 |
 | `LLM_MODEL` | `deepseek-chat` | 模型名 |
+| `LLM_MAX_TOKENS` | `8192` | 单次最大输出 token（仅 JSON 拉取路径发送）。本地 llama.cpp 场景不要给无界值——会一路生成到上下文耗尽；输出被截断时错误信息会给出 `finish_reason=length` 与已生成 token 数，据此再调大 |
 | `TTS_API_KEY` | 空 | TTS Key；为空则前端用浏览器朗读 |
 | `TTS_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容 TTS 地址（硅基流动: `https://api.siliconflow.cn/v1`） |
 | `TTS_MODEL` | `tts-1` | TTS 模型（硅基流动: `FunAudioLLM/CosyVoice2-0.5B` 等） |
