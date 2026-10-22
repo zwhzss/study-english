@@ -1,6 +1,11 @@
 package ai
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 // TestVersionAtLeast 版本闸门回归：微软 Sec-MS-GEC v2 令牌自 7.3.0 起实现，
 // 7.2.8 对所有音色一律 403，必须判为过旧
@@ -115,6 +120,35 @@ func TestTrimVersion(t *testing.T) {
 		if got := trimVersion(in); got != want {
 			t.Errorf("trimVersion(%q) = %q，期望 %q", in, got, want)
 		}
+	}
+}
+
+// TestEdgeTTSSynthesizeReal 真实合成冒烟（默认跳过，需显式开启）：
+// 走完整代码路径（角色→音色→CLI→产物校验），验证本机 edge-tts 确实能出可播放音频。
+// 开启：RUN_EDGE_TTS_SMOKE=1 go test ./internal/ai -run SynthesizeReal -v
+func TestEdgeTTSSynthesizeReal(t *testing.T) {
+	if os.Getenv("RUN_EDGE_TTS_SMOKE") != "1" {
+		t.Skip("设 RUN_EDGE_TTS_SMOKE=1 才跑真实合成（需联网）")
+	}
+	if !EdgeTTSAvailable() {
+		t.Skipf("本机 edge-tts 不满足 >=%s，跳过", EdgeTTSMinVersion)
+	}
+	tr := NewEdgeTTS(t.TempDir())
+	text := "Hello, could you pass me the ruler, please?"
+	for _, role := range []string{"teacher", "waiter", "grandma", "aunt", "father", "student"} {
+		voice := tr.voiceForRole(role)
+		url, err := tr.Synthesize(text, role)
+		if err != nil {
+			t.Errorf("角色 %s（音色 %s）合成失败: %v", role, voice, err)
+			continue
+		}
+		full := filepath.Join(tr.dataDir, filepath.FromSlash(strings.TrimPrefix(url, "/media/")))
+		st, serr := os.Stat(full)
+		if serr != nil || st.Size() < minAudioBytes {
+			t.Errorf("角色 %s 产物无效: %s err=%v", role, full, serr)
+			continue
+		}
+		t.Logf("OK 角色=%-8s 音色=%-24s %d bytes", role, voice, st.Size())
 	}
 }
 

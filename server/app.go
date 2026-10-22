@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"study-english/server/internal/ai"
@@ -32,10 +33,12 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	// 启动日志：定位"安装后无反应"类问题（GUI 程序崩溃信息不显示，必须落盘）
-	logDir, _ := os.UserConfigDir()
-	logPath := filepath.Join(logDir, "StudyEnglish", "app.log")
-	_ = os.MkdirAll(filepath.Dir(logPath), 0o755)
+	// 启动日志：定位"安装后无反应"类问题（GUI 程序崩溃信息不显示，必须落盘）。
+	// 必须落在 cfg.DataDir 而非写死 UserConfigDir——否则 DATA_DIR 指定的隔离环境
+	// 仍会往生产日志里写，也无法用副本做沙箱复现。
+	cfg := config.Load()
+	logPath := filepath.Join(cfg.DataDir, "app.log")
+	_ = os.MkdirAll(cfg.DataDir, 0o755)
 	logf, _ := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	note := func(f string, args ...any) {
 		if logf != nil {
@@ -50,7 +53,6 @@ func (a *App) startup(ctx context.Context) {
 	}()
 	note("启动初始化开始")
 	// 启动后端服务（与 cmd/server/main.go 一致的初始化链路）
-	cfg := config.Load()
 	note("配置加载完成 DB=%s", cfg.DBPath)
 	// 异步确保 edge-tts 可用（不阻塞启动；已安装则秒返回）
 	go ai.EnsureEdgeTTS(func(f string, args ...any) { note(f, args...) })
@@ -87,8 +89,22 @@ func (a *App) runSelfCheck(note func(f string, args ...any)) {
 		reply, err := a.reg.LLM().Chat(ctx, "你是测试助手，只回复 OK 两个字。", "回复 OK 两个字")
 		note("自检 LLM: err=%v 耗时%.1fs 回复=%q", err, time.Since(t0).Seconds(), reply)
 		t0 = time.Now()
-		url, err := a.reg.TTS().Synthesize("Hello, this is a smoke test.", "teacher")
-		note("自检 TTS: err=%v 耗时%.1fs url=%s", err, time.Since(t0).Seconds(), url)
+		// 文本必须每次唯一：固定文本会永久命中缓存，自检就再也测不出 edge-tts 是否真的坏了
+		probe := fmt.Sprintf("Edge TTS startup check at %s.", time.Now().Format("15:04:05"))
+		url, terr := a.reg.TTS().Synthesize(probe, "teacher")
+		switch {
+		case terr != nil:
+			note("自检 TTS: 失败 耗时%.1fs err=%v", time.Since(t0).Seconds(), terr)
+		case url == "":
+			note("自检 TTS: 未生效（当前为 Mock，走浏览器朗读）耗时%.1fs", time.Since(t0).Seconds())
+		default:
+			full := filepath.Join(a.cfg.DataDir, filepath.FromSlash(strings.TrimPrefix(url, "/media/")))
+			if st, serr := os.Stat(full); serr != nil || st.Size() < 1024 {
+				note("自检 TTS: 产物无效 耗时%.1fs url=%s err=%v", time.Since(t0).Seconds(), url, serr)
+			} else {
+				note("自检 TTS: OK 耗时%.1fs %d bytes url=%s", time.Since(t0).Seconds(), st.Size(), url)
+			}
+		}
 		var cnt int64
 		a.tbSvc.CountTextbooks(&cnt)
 		note("自检 DB: 教材 %d 本", cnt)
@@ -98,7 +114,8 @@ func (a *App) runSelfCheck(note func(f string, args ...any)) {
 
 func (a *App) shutdown(ctx context.Context) {}
 
-// logf 追加写启动/运行日志（%AppData%\StudyEnglish\app.log），用于排查"无反应/卡住"类问题
+// logf 追加写运行日志（cfg.DataDir\app.log，桌面版即 %AppData%\StudyEnglish\app.log），
+// 用于排查"无反应/卡住"类问题；与 startup 的启动日志同一文件
 func (a *App) logf(format string, args ...any) {
 	if a.cfg == nil {
 		return

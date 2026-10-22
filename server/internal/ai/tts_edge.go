@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -150,24 +151,60 @@ func edgeTTSCommand(ctx context.Context, voice, text, path string) *exec.Cmd {
 	return cmd
 }
 
+// edgeTTSProbeCache 缓存探测结果。主程序是 GUI 子系统进程（PE Subsystem=2，无控制台），
+// 每 spawn 一个需要控制台的子进程，Windows 都会新建一个控制台窗口——模型配置页每次打开
+// 都查一次可用性，不缓存就会连闪多个黑窗。安装/升级 edge-tts 后需 Reset 使缓存失效。
+var edgeTTSProbeCache struct {
+	mu      sync.Mutex
+	prefix  []string
+	version string
+	probed  bool
+}
+
+// edgeTTSProbe 返回调用入口与已安装版本；未安装时 prefix 为 nil
+func edgeTTSProbe() ([]string, string) {
+	edgeTTSProbeCache.mu.Lock()
+	defer edgeTTSProbeCache.mu.Unlock()
+	if !edgeTTSProbeCache.probed {
+		if prefix, ok := edgeTTSCmdPrefix(); ok {
+			edgeTTSProbeCache.prefix = prefix
+			edgeTTSProbeCache.version = edgeTTSVersion(prefix)
+		}
+		edgeTTSProbeCache.probed = true
+	}
+	return edgeTTSProbeCache.prefix, edgeTTSProbeCache.version
+}
+
+// edgeTTSProbeReset 丢弃缓存，让下次探测读到刚装好的版本
+func edgeTTSProbeReset() {
+	edgeTTSProbeCache.mu.Lock()
+	edgeTTSProbeCache.prefix = nil
+	edgeTTSProbeCache.version = ""
+	edgeTTSProbeCache.probed = false
+	edgeTTSProbeCache.mu.Unlock()
+}
+
 // EdgeTTSAvailable 本机 edge-tts 是否真正可用：装了且版本够新。
 // 微软 2026-10 把握手令牌 Sec-MS-GEC 升级为 v2，仅 7.3.0+ 实现；旧版对**所有**音色
 // 一律 403（实测 7.2.8 全音色失败），所以只判 import 成功会把坏环境误报为就绪。
 func EdgeTTSAvailable() bool {
-	prefix, ok := edgeTTSCmdPrefix()
-	if !ok {
+	prefix, version := edgeTTSProbe()
+	if prefix == nil {
 		return false
 	}
-	return versionAtLeast(edgeTTSVersion(prefix), EdgeTTSMinVersion)
+	return versionAtLeast(version, EdgeTTSMinVersion)
 }
 
-// edgeTTSCmdPrefix 返回调用 edge-tts 的命令前缀：优先 CLI，其次 python -m edge_tts
+// edgeTTSCmdPrefix 返回调用 edge-tts 的命令前缀：优先 CLI（仅 LookPath，不起进程），
+// 其次 python -m edge_tts（需起进程探测，必须隐藏控制台窗口）
 func edgeTTSCmdPrefix() ([]string, bool) {
 	if _, err := exec.LookPath("edge-tts"); err == nil {
 		return []string{"edge-tts"}, true
 	}
 	for _, py := range pythonCandidates() {
-		if err := exec.Command(py, "-c", "import edge_tts").Run(); err == nil {
+		cmd := exec.Command(py, "-c", "import edge_tts")
+		hideWindow(cmd)
+		if err := cmd.Run(); err == nil {
 			return []string{py, "-m", "edge_tts"}, true
 		}
 	}
@@ -186,7 +223,9 @@ func edgeTTSVersion(prefix []string) string {
 	} else {
 		args = []string{"-c", "import edge_tts; print(edge_tts.__version__)"}
 	}
-	out, err := exec.CommandContext(ctx, prefix[0], append(prefix[1:], args...)...).Output()
+	cmd := exec.CommandContext(ctx, prefix[0], append(prefix[1:], args...)...)
+	hideWindow(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}

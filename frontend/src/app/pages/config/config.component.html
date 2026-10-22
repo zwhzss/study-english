@@ -73,6 +73,7 @@
       <div class="grid">
         <label>类型
           <select [(ngModel)]="cfg.tts.provider">
+            <option value="edge">Edge TTS（免费·微软在线）</option>
             <option value="openai">OpenAI 兼容 API</option>
             <option value="mock">Mock（浏览器朗读）</option>
           </select>
