@@ -161,7 +161,7 @@ export class ConfigComponent implements OnInit {
     this.api.saveAIConfig(this.cfg).subscribe({
       next: (res) => {
         this.saving[type] = false;
-        this.savedMsg[type] = res.data.message;
+        this.savedMsg[type] = res.data?.message ?? '已保存';
         // 保存成功后重新加载（拿到脱敏后的最新 key 显示）
         this.api.getAIConfig().subscribe({
           next: (r) => { this.cfg = r.data; },

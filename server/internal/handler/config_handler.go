@@ -64,7 +64,7 @@ func (h *ConfigHandler) SaveConfig(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "配置已保存并生效（无需重启）"})
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": true, "message": "配置已保存并生效（无需重启）"}})
 }
 
 // TestConfig POST /api/config/ai/test 测试指定服务连接（使用画面当前输入的值）

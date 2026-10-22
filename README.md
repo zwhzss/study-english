@@ -34,6 +34,44 @@ cd frontend && npx ng serve      # 终端2：前端 4200（HMR 热更新）
 # 浏览器打开 http://localhost:4200，保存 .ts/.html/.css 即热更新
 ```
 
+## 功能一览
+
+<table>
+  <tr>
+    <td width="50%"><img src="images/英语课堂1.png" alt="教材目录与课时" /></td>
+    <td width="50%"><img src="images/英语课堂2.png" alt="课时内容：AI 配图 + LLM 生成 SVG 示意图" /></td>
+  </tr>
+  <tr>
+    <td><img src="images/英语课堂3.png" alt="多角色情景对话与核心词汇" /></td>
+    <td><img src="images/英语课堂4.png" alt="语法地道表达与能力训练" /></td>
+  </tr>
+  <tr>
+    <td><img src="images/菜单栏.png" alt="教材库：阶段 / 年级 / 名称过滤与单元管理" /></td>
+    <td><img src="images/发音评测.png" alt="发音评测：录制朗读 → AI 评分" /></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="images/模型配置.png" alt="模型配置：LLM / TTS / 绘图一键填充常用平台" /></td>
+  </tr>
+</table>
+
+## 安装与部署
+
+**桌面版（推荐给非技术用户）**：到 [Releases](https://github.com/zwhzss/study-english/releases) 下载 `AIEnglishClass-amd64-installer.exe`，双击安装（需要管理员权限，装入 `Program Files`），从桌面或开始菜单快捷方式启动。
+
+**源码运行**：见下方"快速启动"。
+
+换一台机器部署时的注意事项：
+
+| 事项 | 说明 |
+|---|---|
+| 系统 | Windows 10 / 11 64 位。需 **WebView2 Runtime**（Win10 及以上一般已自带；精简版/LTSC 系统若缺失，安装器会提示下载） |
+| 前端资源 | 已 `go:embed` 打进可执行文件，不需要额外拷贝 `dist` 目录 |
+| 数据位置 | 学习记录、数据库、AI 配置存在 `%AppData%\StudyEnglish`（由 `os.UserConfigDir()` 推导，不含任何固定用户名）；卸载不会自动删除，换机器直接拷贝该目录即可迁移 |
+| API Key | 新机器上配置为空，全部功能自动走内置 mock 示例内容；要到「⚙️ 模型配置」填入自己的 Key 才生成真实内容 |
+| 朗读音色 | 多音色朗读依赖 **edge-tts（Python 包）**，安装包不含 Python。启动时会尝试 `pip install edge-tts` 自动安装；目标机器没有 Python 时自动回退浏览器 `SpeechSynthesis`（能用但音色较平），或在配置页填 OpenAI 兼容 TTS 的 Key 走云端 |
+| 教材音频 | **仓库与安装包均不含教材配套录音和课文原文**（出版社版权）。需要真实课文请用课时页「📥 导入课文」自行导入 |
+| 网页模式 | 只有以 `server/cmd/server` 方式跑 HTTP 服务时才监听 `8090`，端口被占用会启动失败，用 `APP_PORT` 覆盖；桌面版由 Wails 内嵌资源服务，不占端口 |
+
 体验路径：
 1. **教材同步**：左侧「➕ 同步新教材」输入 `人教版七年级英语上册` → 目录树自动初始化（5 单元 10 课时）
 2. **内容拉取**：点课时 →「🤖 从大模型拉取本课内容」→ 图文并茂 + 多角色对话气泡 + **SVG 示意图（LLM 生成、前端零成本渲染）** + 词汇/语法/练习，点击气泡即朗读
@@ -42,7 +80,7 @@ cd frontend && npx ng serve      # 终端2：前端 4200（HMR 热更新）
 5. **模型配置**：左侧「⚙️ 模型配置」→ 页面配置 LLM/TTS/绘图 的 Base URL / API Key / 模型，**测试连接 + 保存立即生效**（无需重启）；Key 脱敏显示；**「常用平台一键填充」**（DeepSeek/硅基流动/OpenAI/智谱/阿里云，选平台自动填 Base URL + 推荐模型）
 6. **教材同步下拉**：创建教材用下拉选择（常用教材预设），出版社/年级自动带出，消除手工输入歧义；**内置真实目录**：人教版七上（Starter 1-3 + Unit 1-7 共 10 单元 20 课时）、外研版七上（Module 1-10 共 20 课时）、牛津译林七上（Starter 1-4 + Unit 1-8 共 20 课时）、新概念第一册（Lesson 1-16）
 7. **课文导入（版权合规）**：课时「📥 导入课文」→ 粘贴文本或上传 PDF → 课文原文入库展示（source=imported，标注"已导入 · 非 AI 生成"），可朗读；**AI 创作**内容为独立拓展（无版权问题），可「🔄 重新生成」
-7. **未配置提示**：未设置大模型 API Key（且未显式选 Mock）时，拉取**新**课时内容会提示「请到模型配置页面设置」；已拉取过的课时走缓存不受影响；显式选「Mock」可继续体验示例内容
+8. **未配置提示**：未设置大模型 API Key（且未显式选 Mock）时，拉取**新**课时内容会提示「请到模型配置页面设置」；已拉取过的课时走缓存不受影响；显式选「Mock」可继续体验示例内容
 
 ## 配置（环境变量）
 
