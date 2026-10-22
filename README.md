@@ -68,7 +68,7 @@ cd frontend && npx ng serve      # 终端2：前端 4200（HMR 热更新）
 | 前端资源 | 已 `go:embed` 打进可执行文件，不需要额外拷贝 `dist` 目录 |
 | 数据位置 | 学习记录、数据库、AI 配置存在 `%AppData%\StudyEnglish`（由 `os.UserConfigDir()` 推导，不含任何固定用户名）；卸载不会自动删除，换机器直接拷贝该目录即可迁移 |
 | API Key | 新机器上配置为空，全部功能自动走内置 mock 示例内容；要到「⚙️ 模型配置」填入自己的 Key 才生成真实内容 |
-| 朗读音色 | 多音色朗读依赖 **edge-tts（Python 包）**，安装包不含 Python。启动时会尝试 `pip install edge-tts` 自动安装；目标机器没有 Python 时自动回退浏览器 `SpeechSynthesis`（能用但音色较平），或在配置页填 OpenAI 兼容 TTS 的 Key 走云端 |
+| 朗读音色 | 多音色朗读依赖 **edge-tts（Python 包）**，安装包不含 Python。启动时会 `pip install -U "edge-tts>=7.3.0"` 自动安装或升级；目标机器没有 Python 时自动回退浏览器 `SpeechSynthesis`（能用但音色较平），或在配置页填 OpenAI 兼容 TTS 的 Key 走云端。**版本下限是硬性的**：微软 2026-10 把握手令牌 `Sec-MS-GEC` 升级为 v2，仅 7.3.0+ 实现，旧版对所有音色一律 403 |
 | 教材音频 | **仓库与安装包均不含教材配套录音和课文原文**（出版社版权）。需要真实课文请用课时页「📥 导入课文」自行导入 |
 | 网页模式 | 只有以 `server/cmd/server` 方式跑 HTTP 服务时才监听 `8090`，端口被占用会启动失败，用 `APP_PORT` 覆盖；桌面版由 Wails 内嵌资源服务，不占端口 |
 

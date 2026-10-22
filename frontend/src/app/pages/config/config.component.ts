@@ -24,7 +24,7 @@ const PLATFORM_PRESETS: Record<string, { name: string; url: string; models: stri
     { name: '阿里云百炼', url: 'https://dashscope.aliyuncs.com/api/v1', models: ['qwen-plus', 'qwen-turbo'] },
   ],
   tts: [
-    { name: 'Edge TTS（免费本地）', url: 'edge://local', models: ['edge-tts'] },
+    { name: 'Edge TTS（免费·微软在线）', url: 'edge://local', models: ['edge-tts'] },
     { name: '硅基流动', url: 'https://api.siliconflow.cn/v1', models: ['FunAudioLLM/CosyVoice2-0.5B', 'fishaudio/fish-speech-1.5'] },
     { name: 'OpenAI', url: 'https://api.openai.com/v1', models: ['tts-1', 'tts-1-hd'] },
     { name: '阿里云百炼', url: 'https://dashscope.aliyuncs.com/api/v1', models: ['cosyvoice-v1', 'sambert-zhichu-v1'] },
@@ -100,19 +100,19 @@ export class ConfigComponent implements OnInit {
     const preset = this.platformsOf(type).find((x) => x.url === platformUrl);
     if (!preset) return;
     if (type === 'tts' && platformUrl === 'edge://local') {
-      // Edge TTS：免费本地，无需 Key/URL
+      // Edge TTS：微软在线服务，免费多音色，无需 Key/URL
       p.provider = 'edge';
       p.base_url = '';
       p.api_key = '';
       p.model = 'edge-tts';
       p.extra = '';
-      this.savedMsg['llm'] = `已切换「${preset.name}」：免费本地多音色（男孩/女孩/教师/爷爷奶奶等），保存后立即生效`;
+      this.savedMsg[type] = `已切换「${preset.name}」：免费多音色（男孩/女孩/教师/爷爷奶奶等），保存后立即生效`;
       return;
     }
     p.provider = 'openai';
     p.base_url = preset.url;
     p.model = preset.models[0]; // 推荐模型（第一个）
-    this.savedMsg['llm'] = `已填充「${preset.name}」：${preset.url} / ${p.model}，填入 API Key 后保存即可`;
+    this.savedMsg[type] = `已填充「${preset.name}」：${preset.url} / ${p.model}，填入 API Key 后保存即可`;
   }
 
   /** 当前 LLM 平台的可用模型列表（如 DeepSeek: flash/pro；其他平台返回空则用自由输入） */

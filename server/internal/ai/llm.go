@@ -55,7 +55,7 @@ func NewLLM(cfg *config.Config) LLMProvider {
 }
 
 // NewTTS 创建 TTS 实现：
-//   - edge：本地 edge-tts（免费多音色，无需 Key）
+//   - edge：微软 Edge 大声朗读（在线未公开接口，免费多音色，无需 Key，需本机 edge-tts>=7.3.0）
 //   - openai（硅基流动等 OpenAI 兼容）：配置 TTS_API_KEY 用真实 TTS
 //   - mock（无 Key）：返回空 URL，前端回退浏览器 SpeechSynthesis
 func NewTTS(cfg *config.Config) TTS {

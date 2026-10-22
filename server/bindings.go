@@ -248,9 +248,9 @@ func (a *App) TTSStatus() (*TTSStatusData, error) {
 	}
 	switch cfg.TTS.Provider {
 	case "edge":
-		label := "Edge TTS 本地（23 角色音色，免费）"
+		label := "Edge TTS 在线（免费多音色，按角色自动选声）"
 		if !edgeAvail {
-			label += " ⚠️ edge-tts 未安装，将自动安装"
+			label += " ⚠️ edge-tts 未安装或版本过旧（需 ≥" + ai.EdgeTTSMinVersion + "），将自动处理"
 		}
 		st.VoiceLabel = label
 	case "mock":
